@@ -182,28 +182,6 @@ function getDefaultDummyData() {
             amount: 0,
             theme: 'emerald',
             aamiin_count: 96
-        },
-        {
-            id: 'local-news-2026-11',
-            tx_date: '2026-11-20',
-            type: 'news',
-            category: 'Program Kesehatan & Sosial',
-            title: 'Siaga Musim Hujan: Paket Sembako Hangat & Selimut Tebal untuk Warga Rentan',
-            description: 'Curah hujan yang mulai tinggi di bulan November tak menyurutkan langkah relawan mengantar paket sembako, minyak kayu putih, serta perlengkapan hangat bagi keluarga dhuafa di kawasan rawan genangan. Terima kasih para donatur setia!',
-            amount: 0,
-            theme: 'blue',
-            aamiin_count: 64
-        },
-        {
-            id: 'local-news-2026-12',
-            tx_date: '2026-12-26',
-            type: 'news',
-            category: 'Laporan Keuangan Bulanan',
-            title: 'Refleksi Akhir Tahun: Ratusan Paket Kebaikan Tersalurkan Sepanjang 2026',
-            description: 'Menutup lembaran tahun 2026 dengan penuh rasa syukur, seluruh amanah infaq warga telah dibukukan secara transparan dan disalurkan tepat sasaran hingga pelosok gang. Semoga menjadi pemberat amal kebaikan kita semua di akhirat kelak.',
-            amount: 0,
-            theme: 'amber',
-            aamiin_count: 108
         }
     ];
 }

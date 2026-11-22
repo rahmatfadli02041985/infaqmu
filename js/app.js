@@ -369,18 +369,17 @@ function grantAccess(role) {
     const periods = getRealtimePeriods();
     populateYearFilter();
     document.getElementById('filter-year').value = periods.previous.year;
-    document.getElementById('filter-month').value = periods.previous.month;
+    document.getElementById('filter-month').value = 'all';
 
     loadWaReportForPeriod(periods.current.year, periods.current.month, false);
 
     ensureTakziahMenuAndViewMounted();
     setupStickyWaPeriodHeader();
     switchMainView('feed');
-    const prevMonthLabel = MONTH_NAMES[parseInt(periods.previous.month, 10) - 1] || '';
     showToast(
         isAdmin
-            ? `Selamat datang, Admin! Beranda menampilkan laporan ${prevMonthLabel} ${periods.previous.year}.`
-            : `Selamat datang! Menampilkan laporan bulan ${prevMonthLabel} ${periods.previous.year}.`,
+            ? `Selamat datang, Admin! Menampilkan seluruh laporan InfaqMU.`
+            : `Selamat datang di Beranda Laporan InfaqMU!`,
         'success'
     );
 }
@@ -460,15 +459,20 @@ function refreshDashboard() {
     const selectedYear = document.getElementById('filter-year').value;
     const searchQuery = document.getElementById('search-input').value.trim().toLowerCase();
 
-    const newsPostsAll = transactions.filter(t => t.type === 'news');
-    document.getElementById('profile-stat-posts').textContent = newsPostsAll.length;
+    const periods = getRealtimePeriods();
+    // Hanya ambil berita yang bulan penyalurannya sudah selesai (sebelum bulan berjalan)
+    const validNewsPosts = newsPostsAll.filter(tx => {
+        if (!tx.tx_date || tx.tx_date.length < 7) return false;
+        const ym = tx.tx_date.substring(0, 7);
+        return ym < periods.current.key;
+    });
+
+    document.getElementById('profile-stat-posts').textContent = validNewsPosts.length;
 
     syncTopKpiCardsRealtime();
 
     const ledger = computeMonthlyLedgerBreakdown(true);
-    const periodLabel = selectedMonth === 'all'
-        ? `Tahun ${selectedYear}`
-        : `${MONTH_NAMES[parseInt(selectedMonth, 10) - 1]} ${selectedYear}`;
+    const periodLabel = 'Semua Laporan';
     document.getElementById('active-period-badge').textContent = periodLabel;
 
     ensureTakziahMenuAndViewMounted();
@@ -499,13 +503,7 @@ function refreshDashboard() {
         return;
     }
 
-    const filteredNews = newsPostsAll
-        .filter(tx => {
-            if (!tx.tx_date) return false;
-            const matchYear = tx.tx_date.startsWith(selectedYear);
-            const matchMonth = selectedMonth === 'all' || tx.tx_date.substring(5, 7) === selectedMonth;
-            return matchYear && matchMonth;
-        })
+    const filteredNews = validNewsPosts
         .filter(tx => {
             if (!searchQuery) return true;
             return (tx.title || '').toLowerCase().includes(searchQuery) ||

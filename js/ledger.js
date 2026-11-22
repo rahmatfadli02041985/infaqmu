@@ -164,6 +164,20 @@ function updateDiagnosticBox(msg) {
 
 function ensureAllMonthlyNewsPresent() {
     const periods = getRealtimePeriods();
+    
+    // Hapus berita bulan berjalan (sekarang) dan bulan selanjutnya
+    let removed = false;
+    transactions = transactions.filter(t => {
+        if (t.type === 'news' && t.tx_date && t.tx_date.length >= 7) {
+            const ym = t.tx_date.substring(0, 7);
+            if (ym >= periods.current.key) {
+                removed = true;
+                return false;
+            }
+        }
+        return true;
+    });
+
     const defaults = getDefaultDummyData().filter(d => d.type === 'news');
     const existingIds = new Set(transactions.map(t => String(t.id)));
     const existingYearMonths = new Set(
@@ -181,7 +195,7 @@ function ensureAllMonthlyNewsPresent() {
             added = true;
         }
     });
-    if (added) saveLocalCache();
+    if (added || removed) saveLocalCache();
 }
 
 function loadLocalFallbackData() {
