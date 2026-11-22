@@ -182,10 +182,12 @@ function handleTakziahBatchPayment(e) {
 
     const memberSelect = document.getElementById('takziah-pay-member-id');
     const amountInput = document.getElementById('takziah-pay-amount');
+    const dateInput = document.getElementById('takziah-pay-date');
     if (!memberSelect || !amountInput) return;
 
     const memberId = memberSelect.value;
     const rawAmount = parseIndoNumber(amountInput.value);
+    const payDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
     const nominal = Number(takziahState.nominalPerMusibah) || 10000;
 
     if (!memberId) {
@@ -200,6 +202,7 @@ function handleTakziahBatchPayment(e) {
     const member = takziahState.members.find(m => m.id === memberId);
     if (!member) return;
     if (!member.payments) member.payments = {};
+    if (!member.paymentDates) member.paymentDates = {};
 
     const slotsNeeded = Math.floor(rawAmount / nominal);
     const unpaidEvents = (takziahState.events || []).filter(ev => Number(member.payments[ev.id] || 0) < nominal);
@@ -218,6 +221,7 @@ function handleTakziahBatchPayment(e) {
     for (let i = 0; i < slotsNeeded; i++) {
         const targetEv = unpaidEvents[i];
         member.payments[targetEv.id] = nominal;
+        member.paymentDates[targetEv.id] = payDate;
     }
 
     const prevScrollLeft = document.getElementById('takziah-bottom-table-scroll')?.scrollLeft || 0;
@@ -230,6 +234,8 @@ function handleTakziahBatchPayment(e) {
     if (newTopBar) newTopBar.scrollLeft = prevScrollLeft;
     const newSelect = document.getElementById('takziah-pay-member-id');
     if (newSelect) newSelect.value = memberId;
+    const newDateInput = document.getElementById('takziah-pay-date');
+    if (newDateInput && payDate) newDateInput.value = payDate;
 
     showToast(`Berhasil mencatat pembayaran ${formatRupiahCompactNoSpace(rawAmount)} (${slotsNeeded}x musibah) untuk ${member.name}!`, 'success');
 }
@@ -298,12 +304,13 @@ function renderTakziahView() {
             const isPaid = val >= nominal;
             if (isAdmin) {
                 if (isPaid) {
+                    const payDateInfo = (m.paymentDates && m.paymentDates[ev.id]) ? ` (Tgl: ${formatDateIndo(m.paymentDates[ev.id])})` : '';
                     return `
                         <td class="border border-slate-800 px-2 py-2 text-right font-medium text-slate-900 bg-white">
                             <div class="flex items-center justify-end gap-1.5">
                                 <button type="button" onclick="toggleTakziahPayment('${m.id}', '${ev.id}')"
                                     class="px-2 py-1 rounded text-[11px] font-bold transition-colors bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100"
-                                    title="Klik untuk membatalkan pembayaran menjadi Rp0">
+                                    title="Lunas ${formatRupiahCompactNoSpace(val)}${payDateInfo} - Klik untuk membatalkan ke Rp0">
                                     ${formatRupiahCompactNoSpace(val)}
                                 </button>
                             </div>
@@ -390,18 +397,21 @@ function renderTakziahView() {
                         <span class="text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">Otomatis Ubah Merah (Rp0) → Hijau (${formatRupiahCompactNoSpace(nominal)})</span>
                     </div>
                     <form onsubmit="handleTakziahBatchPayment(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
-                        <div class="sm:col-span-6">
+                        <div class="sm:col-span-5">
                             <select id="takziah-pay-member-id" required class="w-full px-2.5 py-2 rounded-lg border border-emerald-300 bg-white text-xs font-bold text-slate-900 outline-none focus:border-emerald-600">
                                 ${memberSelectOptions}
                             </select>
                         </div>
                         <div class="sm:col-span-3">
+                            <input type="date" id="takziah-pay-date" required value="${new Date().toISOString().split('T')[0]}" title="Tanggal Pembayaran Iuran" class="w-full px-2.5 py-2 rounded-lg border border-emerald-300 bg-white text-xs font-bold text-slate-900 outline-none focus:border-emerald-600">
+                        </div>
+                        <div class="sm:col-span-2">
                             <div class="relative">
                                 <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">Rp</span>
                                 <input type="text" id="takziah-pay-amount" inputmode="numeric" required placeholder="10.000" oninput="formatMoneyInputLive(this)" class="w-full pl-8 pr-2.5 py-2 rounded-lg border border-emerald-300 bg-white font-mono text-xs font-extrabold text-emerald-950 outline-none focus:border-emerald-600">
                             </div>
                         </div>
-                        <div class="sm:col-span-3">
+                        <div class="sm:col-span-2">
                             <button type="submit" class="w-full py-2 px-3 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-extrabold shadow-sm transition-colors">
                                 Bayar Iuran
                             </button>
@@ -518,6 +528,7 @@ async function toggleTakziahPayment(memberId, eventId) {
 
     const prevScrollLeft = document.getElementById('takziah-bottom-table-scroll')?.scrollLeft || 0;
     member.payments[eventId] = 0;
+    if (member.paymentDates) delete member.paymentDates[eventId];
 
     saveTakziahState();
     renderTakziahView();
@@ -656,6 +667,7 @@ async function deleteTakziahEvent(eventId) {
     });
     takziahState.members.forEach(m => {
         if (m.payments) delete m.payments[eventId];
+        if (m.paymentDates) delete m.paymentDates[eventId];
     });
 
     saveTakziahState();
