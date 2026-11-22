@@ -352,18 +352,43 @@ function grantAccess(role) {
     document.getElementById('btn-open-security').classList.toggle('hidden', !isAdmin);
     document.getElementById('fab-create-post').classList.toggle('hidden', !isAdmin);
     document.getElementById('fab-create-post').classList.toggle('flex', isAdmin);
-    document.getElementById('nav-btn-wa').classList.toggle('hidden', !isAdmin);
-    document.getElementById('nav-btn-wa').classList.toggle('flex', isAdmin);
-    document.getElementById('story-highlight-wa').classList.toggle('hidden', !isAdmin);
-    document.getElementById('story-highlight-wa').classList.toggle('flex', isAdmin);
+
+    // Navigasi Beranda: disembunyikan sementara untuk Jamaah, tampil untuk Admin
+    const navFeedBtn = document.getElementById('nav-btn-feed');
+    if (navFeedBtn) {
+        navFeedBtn.classList.toggle('hidden', !isAdmin);
+        navFeedBtn.classList.toggle('flex', isAdmin);
+    }
+
+    // Navigasi Laporan InfaqMu: tampil untuk Admin dan Jamaah
+    const navWaBtn = document.getElementById('nav-btn-wa');
+    if (navWaBtn) {
+        navWaBtn.classList.remove('hidden');
+        navWaBtn.classList.add('flex');
+    }
+
+    // Highlight Story Laporan InfaqMu: tampil untuk Admin dan Jamaah
+    const storyWaBtn = document.getElementById('story-highlight-wa');
+    if (storyWaBtn) {
+        storyWaBtn.classList.remove('hidden');
+        storyWaBtn.classList.add('flex');
+    }
+
+    // Header & Editor Laporan InfaqMu: Admin vs Jamaah
+    const waAdminHeader = document.getElementById('wa-admin-header-card');
+    const waViewerHeader = document.getElementById('wa-viewer-header-card');
+    const waEditorBox = document.getElementById('wa-admin-editor-box');
+    if (waAdminHeader) waAdminHeader.classList.toggle('hidden', !isAdmin);
+    if (waViewerHeader) waViewerHeader.classList.toggle('hidden', isAdmin);
+    if (waEditorBox) waEditorBox.classList.toggle('hidden', !isAdmin);
 
     const btnSecondary = document.getElementById('btn-profile-secondary');
     if (isAdmin) {
         btnSecondary.textContent = 'Rekap Laporan WA';
         btnSecondary.onclick = () => switchMainView('wa');
     } else {
-        btnSecondary.textContent = 'Grafik Transparansi';
-        btnSecondary.onclick = () => switchMainView('stats');
+        btnSecondary.textContent = 'Laporan InfaqMu';
+        btnSecondary.onclick = () => switchMainView('wa');
     }
 
     const periods = getRealtimePeriods();
@@ -371,16 +396,23 @@ function grantAccess(role) {
     document.getElementById('filter-year').value = periods.previous.year;
     document.getElementById('filter-month').value = periods.previous.month;
 
-    loadWaReportForPeriod(periods.current.year, periods.current.month, false);
+    loadWaReportForPeriod(periods.previous.year, periods.previous.month, false);
 
     ensureTakziahMenuAndViewMounted();
     setupStickyWaPeriodHeader();
-    switchMainView('feed');
+
+    // Default view: Jamaah langsung ke 'wa' (Pratinjau Laporan InfaqMu), Admin ke 'feed'
+    if (isAdmin) {
+        switchMainView('feed');
+    } else {
+        switchMainView('wa');
+    }
+
     const prevMonthLabel = MONTH_NAMES[parseInt(periods.previous.month, 10) - 1] || '';
     showToast(
         isAdmin
-            ? `Selamat datang, Admin! Beranda menampilkan laporan ${prevMonthLabel} ${periods.previous.year}.`
-            : `Selamat datang! Menampilkan laporan bulan ${prevMonthLabel} ${periods.previous.year}.`,
+            ? `Selamat datang, Admin! Menampilkan sistem InfaqMu.`
+            : `Selamat datang! Menampilkan Pratinjau Laporan InfaqMu.`,
         'success'
     );
 }
@@ -415,8 +447,8 @@ function clearSearch() {
 }
 
 function switchMainView(view) {
-    if (view === 'wa' && currentRole !== 'admin') {
-        showToast('Menu Laporan InfaqMu khusus untuk Panitia / Admin.', 'error');
+    if (view === 'feed' && currentRole !== 'admin') {
+        showToast('Menu Beranda sedang disembunyikan sementara untuk Jamaah.', 'info');
         return;
     }
     currentMainView = view;
@@ -425,19 +457,28 @@ function switchMainView(view) {
     const inactiveCls = 'flex items-center gap-1.5 px-3.5 py-2 rounded-full text-slate-400 hover:text-white font-semibold text-xs transition-all';
 
     ensureTakziahMenuAndViewMounted();
-    document.getElementById('nav-btn-feed').className = view === 'feed' ? activeCls : inactiveCls;
-    document.getElementById('nav-btn-stats').className = view === 'stats' ? activeCls : inactiveCls;
+    const navFeedEl = document.getElementById('nav-btn-feed');
+    if (navFeedEl) {
+        if (currentRole !== 'admin') {
+            navFeedEl.className = 'hidden';
+        } else {
+            navFeedEl.className = view === 'feed' ? activeCls : inactiveCls;
+        }
+    }
+    const navStatsEl = document.getElementById('nav-btn-stats');
+    if (navStatsEl) navStatsEl.className = view === 'stats' ? activeCls : inactiveCls;
+    const navWaEl = document.getElementById('nav-btn-wa');
+    if (navWaEl) navWaEl.className = view === 'wa' ? activeCls : inactiveCls;
     const navTakziahEl = document.getElementById('nav-btn-takziah');
     if (navTakziahEl) navTakziahEl.className = view === 'takziah' ? activeCls : inactiveCls;
-    if (currentRole === 'admin') {
-        document.getElementById('nav-btn-wa').className = view === 'wa' ? activeCls : inactiveCls;
-    }
 
     document.getElementById('feed-mode-tabs').classList.toggle('hidden', view !== 'feed');
 
     if (view === 'wa') {
         const periods = getRealtimePeriods();
-        loadWaReportForPeriod(periods.current.year, periods.current.month, false);
+        if (!waFormState || !waFormState.month) {
+            loadWaReportForPeriod(periods.previous.year, periods.previous.month, false);
+        }
         setTimeout(setupStickyWaPeriodHeader, 50);
     }
 
@@ -494,6 +535,14 @@ function refreshDashboard() {
 
     if (currentMainView === 'wa') {
         document.getElementById('wa-view').classList.remove('hidden');
+        const isAdmin = currentRole === 'admin';
+        const waAdminHeader = document.getElementById('wa-admin-header-card');
+        const waViewerHeader = document.getElementById('wa-viewer-header-card');
+        const waEditorBox = document.getElementById('wa-admin-editor-box');
+        if (waAdminHeader) waAdminHeader.classList.toggle('hidden', !isAdmin);
+        if (waViewerHeader) waViewerHeader.classList.toggle('hidden', isAdmin);
+        if (waEditorBox) waEditorBox.classList.toggle('hidden', !isAdmin);
+
         renderPublishedMonthsBar();
         updateWaLivePreview();
         return;

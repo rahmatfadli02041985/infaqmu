@@ -311,9 +311,10 @@
             <p class="text-xs text-slate-500 mt-1">Pilih "Semua Bulan" pada filter di atas atau terbitkan berita baru dari tombol Admin.</p>
         </div>
 
-        <!-- KONTEN UTAMA 2: REKAP WA & FORM INPUT RINCIAN BULANAN (KHUSUS ADMIN) -->
+        <!-- KONTEN UTAMA 2: REKAP WA & FORM INPUT RINCIAN BULANAN -->
         <section id="wa-view" class="hidden p-4 space-y-4">
-            <div class="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-emerald-950 text-white">
+            <!-- HEADER KHUSUS ADMIN -->
+            <div id="wa-admin-header-card" class="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-emerald-950 text-white">
                 <div class="flex items-center justify-between">
                     <div>
                         <span class="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-bold uppercase tracking-wider">Khusus Admin</span>
@@ -324,6 +325,18 @@
                     </button>
                 </div>
                 <p class="text-xs text-slate-300 mt-1">Data rincian bulanan terkunci secara default agar aman. Klik tombol <strong>Edit Rincian</strong> untuk mengubah.</p>
+            </div>
+
+            <!-- HEADER KHUSUS JAMAAH (PRATINJAU LAPORAN) -->
+            <div id="wa-viewer-header-card" class="hidden p-4 rounded-2xl bg-gradient-to-br from-emerald-800 to-teal-950 text-white shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="px-2 py-0.5 rounded-full bg-emerald-700/60 text-emerald-200 text-[10px] font-bold uppercase tracking-wider">Publik Jamaah</span>
+                        <h3 class="font-display font-bold text-base mt-1">Pratinjau Laporan InfaqMu</h3>
+                    </div>
+                    <span class="text-xs font-semibold text-emerald-200">Arus Kas &amp; Penyaluran</span>
+                </div>
+                <p class="text-xs text-emerald-100/90 mt-1">Transparansi penerimaan kas dan realisasi penyaluran sembako dhuafa per bulan. Silakan pilih bulan pada baris tombol di bawah ini.</p>
             </div>
 
             <div id="wa-published-months-bar" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1"></div>
@@ -410,7 +423,7 @@
                 </button>
             </div>
 
-            <div class="bg-[#e5ddd5] rounded-2xl p-3.5 border border-slate-200 space-y-3">
+            <div id="wa-preview-box" class="bg-[#e5ddd5] rounded-2xl p-3.5 border border-slate-200 space-y-3">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-extrabold text-slate-800">Pratinjau Teks WhatsApp</span>
                     <span id="wa-preview-period-tag" class="px-2 py-0.5 rounded-full bg-white text-emerald-800 text-[10px] font-bold">Oktober 2026</span>
