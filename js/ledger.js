@@ -113,7 +113,14 @@ async function syncInitialData(showNotification = false) {
                 theme: r.theme || 'emerald',
                 aamiin_count: Number(r.aamiin_count) || 0
             }));
-            const localOnly = transactions.filter(t => String(t.id).startsWith('local-'));
+            const cloudSignatures = new Set(
+                cloudMapped.map(c => `${c.type}::${(c.title || '').trim().toLowerCase()}::${(c.tx_date || '').substring(0, 7)}`)
+            );
+            const localOnly = transactions.filter(t => {
+                if (!String(t.id).startsWith('local-')) return false;
+                const sig = `${t.type}::${(t.title || '').trim().toLowerCase()}::${(t.tx_date || '').substring(0, 7)}`;
+                return !cloudSignatures.has(sig);
+            });
             transactions = [...cloudMapped, ...localOnly];
             deduplicateMonthlyLedgerRecords();
             ensureAllMonthlyNewsPresent();
@@ -198,6 +205,7 @@ function loadLocalFallbackData() {
         const l = localStorage.getItem(STORAGE_KEYS.LIKED_IDS);
         if (l) likedTxIds = new Set(JSON.parse(l));
 
+        deduplicateMonthlyLedgerRecords();
         ensureAllMonthlyNewsPresent();
     } catch (e) {
         transactions = getDefaultDummyData();
@@ -215,22 +223,54 @@ function saveLocalCache() {
 
 function deduplicateMonthlyLedgerRecords() {
     const seenMonthlyKey = new Set();
+    const seenNewsKey = new Set();
+    const seenNewsDesc = new Set();
     const cleaned = [];
-    const sorted = [...transactions].sort((a, b) => String(b.id).localeCompare(String(a.id)));
+
+    // Prioritaskan transaksi dari Cloud di atas data lokal, lalu ID terbaru
+    const sorted = [...transactions].sort((a, b) => {
+        const aIsCloud = !String(a.id).startsWith('local-') ? 1 : 0;
+        const bIsCloud = !String(b.id).startsWith('local-') ? 1 : 0;
+        if (aIsCloud !== bIsCloud) return bIsCloud - aIsCloud;
+        return String(b.id).localeCompare(String(a.id));
+    });
 
     for (const tx of sorted) {
-        if ((tx.type === 'in' || tx.type === 'out') && tx.tx_date) {
-            const ym = tx.tx_date.substring(0, 7);
-            const titleNorm = (tx.title || '').toLowerCase();
-            if (titleNorm.includes('penerimaan infaq bulan') || titleNorm.includes('belanja sembako') || titleNorm.includes('kaleng infaqmu')) {
+        if (!tx.tx_date) {
+            cleaned.push(tx);
+            continue;
+        }
+        const ym = tx.tx_date.substring(0, 7);
+        const titleNorm = (tx.title || '').trim().toLowerCase();
+
+        if (tx.type === 'in' || tx.type === 'out') {
+            if (titleNorm.includes('penerimaan infaq bulan') || titleNorm.includes('belanja sembako') || titleNorm.includes('kaleng infaqmu') || titleNorm.includes('laporan & penyaluran')) {
                 const key = `${ym}-${tx.type}`;
                 if (seenMonthlyKey.has(key)) continue;
                 seenMonthlyKey.add(key);
             }
+        } else if (tx.type === 'news') {
+            // Deduplikasi postingan berita pada tiap bulannya
+            const newsKey = `${ym}::${titleNorm}`;
+            const descSnip = (tx.description || '').trim().toLowerCase().slice(0, 50);
+            const descKey = descSnip ? `${ym}::desc::${descSnip}` : null;
+
+            if (titleNorm && seenNewsKey.has(newsKey)) {
+                continue; // Duplikat judul pada bulan yang sama
+            }
+            if (descKey && seenNewsDesc.has(descKey)) {
+                continue; // Duplikat isi/deskripsi pada bulan yang sama
+            }
+
+            if (titleNorm) seenNewsKey.add(newsKey);
+            if (descKey) seenNewsDesc.add(descKey);
         }
         cleaned.push(tx);
     }
+
+    const changed = cleaned.length !== transactions.length;
     transactions = cleaned;
+    if (changed) saveLocalCache();
 }
 
 function syncWaReportsStoreFromTransactions() {

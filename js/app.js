@@ -456,6 +456,7 @@ function setFeedLayoutMode(mode) {
 }
 
 function refreshDashboard() {
+    deduplicateMonthlyLedgerRecords();
     const selectedMonth = document.getElementById('filter-month').value;
     const selectedYear = document.getElementById('filter-year').value;
     const searchQuery = document.getElementById('search-input').value.trim().toLowerCase();
