@@ -505,48 +505,28 @@ function refreshDashboard() {
         return;
     }
 
+    // Tampilkan semua berita yang ada berurut secara ascending (terlama ke terbaru)
+    const sortedNews = newsPostsAll
+        .filter(tx => {
+            if (!tx.tx_date) return false;
+            if (!searchQuery) return true;
+            return (tx.title || '').toLowerCase().includes(searchQuery) ||
+                   (tx.description || '').toLowerCase().includes(searchQuery) ||
+                   (tx.category || '').toLowerCase().includes(searchQuery);
+        })
+        .sort((a, b) => new Date(a.tx_date) - new Date(b.tx_date));
+
+    if (sortedNews.length === 0) {
+        document.getElementById('empty-state').classList.remove('hidden');
+        return;
+    }
+
     if (feedLayoutMode === 'grid') {
-        // Tampilkan semua berita yang ada berurut secara ascending (terlama ke terbaru)
-        const gridNews = newsPostsAll
-            .filter(tx => {
-                if (!tx.tx_date) return false;
-                if (!searchQuery) return true;
-                return (tx.title || '').toLowerCase().includes(searchQuery) ||
-                       (tx.description || '').toLowerCase().includes(searchQuery) ||
-                       (tx.category || '').toLowerCase().includes(searchQuery);
-            })
-            .sort((a, b) => new Date(a.tx_date) - new Date(b.tx_date));
-
-        if (gridNews.length === 0) {
-            document.getElementById('empty-state').classList.remove('hidden');
-            return;
-        }
-
         document.getElementById('grid-view').classList.remove('hidden');
-        renderInstagramGrid(gridNews);
+        renderInstagramGrid(sortedNews);
     } else {
-        const filteredNews = newsPostsAll
-            .filter(tx => {
-                if (!tx.tx_date) return false;
-                const matchYear = tx.tx_date.startsWith(selectedYear);
-                const matchMonth = selectedMonth === 'all' || tx.tx_date.substring(5, 7) === selectedMonth;
-                return matchYear && matchMonth;
-            })
-            .filter(tx => {
-                if (!searchQuery) return true;
-                return (tx.title || '').toLowerCase().includes(searchQuery) ||
-                       (tx.description || '').toLowerCase().includes(searchQuery) ||
-                       (tx.category || '').toLowerCase().includes(searchQuery);
-            })
-            .sort((a, b) => new Date(b.tx_date) - new Date(a.tx_date));
-
-        if (filteredNews.length === 0) {
-            document.getElementById('empty-state').classList.remove('hidden');
-            return;
-        }
-
         document.getElementById('feed-view').classList.remove('hidden');
-        renderInstagramFeed(filteredNews);
+        renderInstagramFeed(sortedNews);
     }
 }
 
