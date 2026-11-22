@@ -598,21 +598,27 @@ function renderInstagramFeed(list) {
                     ${adminActions}
                 </div>
 
-                <div onclick="togglePosterExpand('${txKey}', event)" ondblclick="handleDoubleTapPoster('${txKey}', this)" class="rounded-2xl bg-gradient-to-br ${grad} ${isExpanded ? 'p-6 sm:p-7' : 'p-6'} text-white relative overflow-hidden select-none cursor-pointer shadow-sm transition-all duration-300">
-                    <span class="inline-block px-2.5 py-1 rounded-full bg-white/20 text-[10px] font-extrabold uppercase tracking-wider mb-3">
-                        ${escapeHtml(tx.category)}
-                    </span>
-                    <h3 class="font-display font-extrabold text-lg sm:text-xl leading-snug">
-                        ${escapeHtml(tx.title)}
-                    </h3>
-                    ${expandedContent}
-                    <div class="mt-4 pt-3 border-t border-white/15 flex items-center justify-between text-[11px] text-white/85">
-                        <a href="javascript:void(0)" onclick="togglePosterExpand('${txKey}', event)" class="underline decoration-white/70 hover:text-white font-semibold cursor-pointer">
-                            ${isExpanded ? 'tutup..' : 'selengkapnya..'}
-                        </a>
-                        <span>${formatDateIndo(tx.tx_date)}</span>
+                <div onclick="togglePosterExpand('${txKey}', event)" ondblclick="handleDoubleTapPoster('${txKey}', this)" class="rounded-2xl ${tx.image ? 'bg-slate-900' : 'bg-gradient-to-br ' + grad} ${isExpanded ? 'p-6 sm:p-7' : 'p-6'} text-white relative overflow-hidden select-none cursor-pointer shadow-sm transition-all duration-300">
+                    ${tx.image ? `
+                        <img src="${escapeHtml(tx.image)}" alt="${escapeHtml(tx.title)}" class="absolute inset-0 w-full h-full object-cover pointer-events-none">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/35 pointer-events-none"></div>
+                    ` : ''}
+                    <div class="relative z-10">
+                        <span class="inline-block px-2.5 py-1 rounded-full ${tx.image ? 'bg-black/50 backdrop-blur-sm border border-white/20' : 'bg-white/20'} text-[10px] font-extrabold uppercase tracking-wider mb-3">
+                            ${escapeHtml(tx.category)}
+                        </span>
+                        <h3 class="font-display font-extrabold text-lg sm:text-xl leading-snug drop-shadow-sm">
+                            ${escapeHtml(tx.title)}
+                        </h3>
+                        ${expandedContent}
+                        <div class="mt-4 pt-3 border-t border-white/20 flex items-center justify-between text-[11px] text-white/90">
+                            <a href="javascript:void(0)" onclick="togglePosterExpand('${txKey}', event)" class="underline decoration-white/70 hover:text-white font-semibold cursor-pointer">
+                                ${isExpanded ? 'tutup..' : 'selengkapnya..'}
+                            </a>
+                            <span>${formatDateIndo(tx.tx_date)}</span>
+                        </div>
                     </div>
-                    <div class="double-tap-overlay hidden absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="double-tap-overlay hidden absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
                         <svg class="w-20 h-20 text-white drop-shadow-lg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                     </div>
                 </div>
@@ -656,9 +662,13 @@ function renderInstagramGrid(list) {
         const txKey = String(tx.id);
         const grad = getThemeGradient(tx.theme);
         return `
-            <button type="button" onclick="openPostInFullMode('${txKey}')" class="aspect-square bg-gradient-to-br ${grad} p-2.5 text-left text-white flex flex-col justify-between overflow-hidden relative active:scale-95 transition-transform cursor-pointer">
-                <span class="text-[9px] font-bold uppercase bg-black/25 px-1.5 py-0.5 rounded w-fit">${escapeHtml(tx.category)}</span>
-                <div class="font-display font-bold text-[11px] leading-tight line-clamp-3">${escapeHtml(tx.title)}</div>
+            <button type="button" onclick="openPostInFullMode('${txKey}')" class="aspect-square ${tx.image ? 'bg-slate-900' : 'bg-gradient-to-br ' + grad} p-2.5 text-left text-white flex flex-col justify-between overflow-hidden relative active:scale-95 transition-transform cursor-pointer group">
+                ${tx.image ? `
+                    <img src="${escapeHtml(tx.image)}" alt="${escapeHtml(tx.title)}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/20 pointer-events-none"></div>
+                ` : ''}
+                <span class="relative z-10 text-[9px] font-bold uppercase bg-black/40 backdrop-blur-xs px-1.5 py-0.5 rounded w-fit">${escapeHtml(tx.category)}</span>
+                <div class="relative z-10 font-display font-bold text-[11px] leading-tight line-clamp-3 drop-shadow-sm">${escapeHtml(tx.title)}</div>
             </button>
         `;
     }).join('');
@@ -976,6 +986,108 @@ function renderStatsView(year, month, periodLabel, ledger) {
     }
 }
 
+// --- HELPER UNTUK TEMA FOTO POSTER BERITA ---
+function clearNewsImageState() {
+    const dataEl = document.getElementById('news-image-data');
+    const urlEl = document.getElementById('news-image-url');
+    const inputEl = document.getElementById('news-image-input');
+    const previewWrapper = document.getElementById('news-image-preview-wrapper');
+    const previewImg = document.getElementById('news-image-preview');
+    const btnRemove = document.getElementById('btn-remove-news-image');
+    const btnText = document.getElementById('news-image-btn-text');
+
+    if (dataEl) dataEl.value = '';
+    if (urlEl) urlEl.value = '';
+    if (inputEl) inputEl.value = '';
+    if (previewImg) previewImg.src = '';
+    if (previewWrapper) previewWrapper.classList.add('hidden');
+    if (btnRemove) btnRemove.classList.add('hidden');
+    if (btnText) btnText.textContent = 'Unggah Foto Poster';
+}
+
+function clearNewsImage() {
+    clearNewsImageState();
+    showToast('Foto poster dihapus, kembali menggunakan tema warna.', 'info');
+}
+
+function setNewsImagePreview(imgSrc) {
+    const dataEl = document.getElementById('news-image-data');
+    const previewWrapper = document.getElementById('news-image-preview-wrapper');
+    const previewImg = document.getElementById('news-image-preview');
+    const btnRemove = document.getElementById('btn-remove-news-image');
+    const btnText = document.getElementById('news-image-btn-text');
+
+    if (!imgSrc) {
+        clearNewsImageState();
+        return;
+    }
+    if (dataEl) dataEl.value = imgSrc;
+    if (previewImg) previewImg.src = imgSrc;
+    if (previewWrapper) previewWrapper.classList.remove('hidden');
+    if (btnRemove) btnRemove.classList.remove('hidden');
+    if (btnText) btnText.textContent = 'Ganti Foto Poster';
+}
+
+function handleNewsImageUrlInput(url) {
+    const cleanUrl = (url || '').trim();
+    if (cleanUrl) {
+        setNewsImagePreview(cleanUrl);
+    } else {
+        clearNewsImageState();
+    }
+}
+
+async function handleNewsImageSelect(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        showToast('Format file harus berupa gambar/foto.', 'error');
+        return;
+    }
+
+    try {
+        const compressedBase64 = await compressImageFile(file, 1080, 1080, 0.82);
+        setNewsImagePreview(compressedBase64);
+        const urlInput = document.getElementById('news-image-url');
+        if (urlInput) urlInput.value = '';
+        showToast('Foto berhasil dimuat untuk poster berita!', 'success');
+    } catch (err) {
+        showToast('Gagal memproses foto: ' + err.message, 'error');
+    }
+}
+
+function compressImageFile(file, maxWidth = 1080, maxHeight = 1080, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let { width, height } = img;
+                if (width > maxWidth || height > maxHeight) {
+                    if (width / height > maxWidth / maxHeight) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    } else {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
 // --- MODAL BERITA & PENGATURAN ADMIN ---
 function openNewsModal(editId = null) {
     if (currentRole !== 'admin') return;
@@ -992,11 +1104,21 @@ function openNewsModal(editId = null) {
         document.getElementById('news-date').value = tx.tx_date;
         document.getElementById('news-category').value = tx.category;
         document.getElementById('news-theme').value = tx.theme || 'emerald';
+
+        const img = tx.image || '';
+        if (img) {
+            setNewsImagePreview(img);
+            const urlInput = document.getElementById('news-image-url');
+            if (urlInput && img.startsWith('http')) urlInput.value = img;
+        } else {
+            clearNewsImageState();
+        }
     } else {
         document.getElementById('modal-news-title').textContent = 'Posting Berita Baru';
         document.getElementById('news-id').value = '';
         document.getElementById('news-form').reset();
         document.getElementById('news-date').value = new Date().toISOString().split('T')[0];
+        clearNewsImageState();
     }
 
     document.getElementById('news-modal').classList.remove('hidden');
@@ -1013,6 +1135,7 @@ async function handleSaveNews(e) {
     if (currentRole !== 'admin') return;
 
     const id = document.getElementById('news-id').value;
+    const imageData = (document.getElementById('news-image-data')?.value || '').trim();
     const payload = {
         type: 'news',
         title: document.getElementById('news-title').value.trim(),
@@ -1020,6 +1143,7 @@ async function handleSaveNews(e) {
         tx_date: document.getElementById('news-date').value,
         category: document.getElementById('news-category').value,
         theme: document.getElementById('news-theme').value,
+        image: imageData || null,
         amount: 0
     };
 
@@ -1039,7 +1163,7 @@ async function handleSaveNews(e) {
     saveLocalCache();
     closeNewsModal();
     refreshDashboard();
-    showToast('Berita kegiatan berhasil diterbitkan!', 'success');
+    showToast(id ? 'Berita kegiatan berhasil diperbarui!' : 'Berita kegiatan berhasil diterbitkan!', 'success');
 }
 
 function promptDeleteTransaction(id) {

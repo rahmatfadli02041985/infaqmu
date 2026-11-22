@@ -559,6 +559,40 @@
                         <option value="purple">Ungu Violet (Program Dakwah)</option>
                     </select>
                 </div>
+
+                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <svg class="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            <span>Ganti Tema Warna dengan Foto</span>
+                        </label>
+                        <button type="button" id="btn-remove-news-image" onclick="clearNewsImage()" class="hidden text-[11px] font-bold text-rose-600 hover:underline">
+                            Hapus Foto (Gunakan Warna)
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-500 leading-tight">
+                        Pilih foto kegiatan untuk mengubah latar poster menjadi foto nyata.
+                    </p>
+
+                    <input type="hidden" id="news-image-data">
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <label class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-emerald-400 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-900 cursor-pointer text-xs font-bold transition-colors">
+                            <svg class="w-4 h-4 text-emerald-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <span id="news-image-btn-text">Unggah Foto Poster</span>
+                            <input type="file" id="news-image-input" accept="image/*" onchange="handleNewsImageSelect(event)" class="hidden">
+                        </label>
+                        <input type="url" id="news-image-url" oninput="handleNewsImageUrlInput(this.value)" placeholder="Atau tempel link URL foto..." class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs outline-none focus:border-emerald-600">
+                    </div>
+
+                    <div id="news-image-preview-wrapper" class="hidden mt-2 relative rounded-xl overflow-hidden border border-slate-200 aspect-video max-h-36 bg-slate-950">
+                        <img id="news-image-preview" src="" alt="Pratinjau Foto Poster" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent flex items-end justify-between p-2.5 pointer-events-none">
+                            <span class="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-bold">Foto Poster Aktif</span>
+                            <span class="text-[10px] text-white/90">Menggantikan tema warna</span>
+                        </div>
+                    </div>
+                </div>
                 <button type="submit" id="btn-submit-news" class="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md">
                     Terbitkan ke Beranda
                 </button>
