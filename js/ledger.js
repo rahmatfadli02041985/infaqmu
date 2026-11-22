@@ -124,7 +124,6 @@ async function syncInitialData(showNotification = false) {
             transactions = [...cloudMapped, ...localOnly];
             deduplicateMonthlyLedgerRecords();
             ensureAllMonthlyNewsPresent();
-            applyOctoberNewsCategoryUpdate();
             syncWaReportsStoreFromTransactions();
         }
 
@@ -208,25 +207,10 @@ function loadLocalFallbackData() {
 
         deduplicateMonthlyLedgerRecords();
         ensureAllMonthlyNewsPresent();
-        applyOctoberNewsCategoryUpdate();
     } catch (e) {
         transactions = getDefaultDummyData();
         waReportsStore = getDefaultWaReports();
-        applyOctoberNewsCategoryUpdate();
     }
-}
-
-function applyOctoberNewsCategoryUpdate() {
-    let changed = false;
-    transactions.forEach(t => {
-        if (t.type === 'news' && t.tx_date && t.tx_date <= '2026-10-31') {
-            if (t.category !== 'Laporan Keuangan Bulanan') {
-                t.category = 'Laporan Keuangan Bulanan';
-                changed = true;
-            }
-        }
-    });
-    if (changed) saveLocalCache();
 }
 
 function saveLocalCache() {
