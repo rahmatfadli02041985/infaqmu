@@ -304,7 +304,9 @@ function renderTakziahView() {
             const isPaid = val >= nominal;
             if (isAdmin) {
                 if (isPaid) {
-                    const payDateInfo = (m.paymentDates && m.paymentDates[ev.id]) ? ` (Tgl: ${formatDateIndo(m.paymentDates[ev.id])})` : '';
+                    const rawDate = (m.paymentDates && m.paymentDates[ev.id]) ? m.paymentDates[ev.id] : null;
+                    const payDateStr = rawDate ? (rawDate.includes('-') ? formatDateIndo(rawDate) : rawDate) : '';
+                    const payDateInfo = payDateStr ? ` (Tgl: ${payDateStr})` : '';
                     return `
                         <td class="border border-slate-800 px-2 py-2 text-right font-medium text-slate-900 bg-white">
                             <div class="flex items-center justify-end gap-1.5">
@@ -508,6 +510,7 @@ async function toggleTakziahPayment(memberId, eventId) {
     const member = takziahState.members.find(m => m.id === memberId);
     if (!member) return;
     if (!member.payments) member.payments = {};
+    if (!member.paymentDates) member.paymentDates = {};
 
     const currentVal = Number(member.payments[eventId] || 0);
     if (currentVal <= 0) {
@@ -517,9 +520,14 @@ async function toggleTakziahPayment(memberId, eventId) {
 
     const evObj = (takziahState.events || []).find(ev => ev.id === eventId);
     const evLabel = evObj ? `${evObj.label} (${evObj.date})` : 'iuran musibah ini';
+    const rawPayDate = member.paymentDates[eventId];
+    const payDateText = rawPayDate
+        ? (rawPayDate.includes('-') ? formatDateIndo(rawPayDate) : rawPayDate)
+        : (evObj && evObj.date && !evObj.date.startsWith('Musibah') ? evObj.date : formatDateIndo(new Date().toISOString().split('T')[0]));
+
     const confirmed = await showInAppDialog({
         title: 'Batalkan Pembayaran Iuran?',
-        message: `Apakah Anda yakin ingin mengubah pembayaran ${member.name} pada ${evLabel} dari ${formatRupiahCompactNoSpace(currentVal)} menjadi Rp0?`,
+        message: `Apakah Anda yakin ingin membatalkan pembayaran ${member.name} pada ${evLabel} sebesar ${formatRupiahCompactNoSpace(currentVal)} (Tanggal Transaksi Pembayaran: ${payDateText}) menjadi Rp0?`,
         confirmText: 'Ya, Ubah ke Rp0',
         cancelText: 'Batal'
     });
@@ -528,7 +536,7 @@ async function toggleTakziahPayment(memberId, eventId) {
 
     const prevScrollLeft = document.getElementById('takziah-bottom-table-scroll')?.scrollLeft || 0;
     member.payments[eventId] = 0;
-    if (member.paymentDates) delete member.paymentDates[eventId];
+    delete member.paymentDates[eventId];
 
     saveTakziahState();
     renderTakziahView();
@@ -537,7 +545,7 @@ async function toggleTakziahPayment(memberId, eventId) {
     const newTopBar = document.getElementById('takziah-top-scroll-bar');
     if (newBottomWrap) newBottomWrap.scrollLeft = prevScrollLeft;
     if (newTopBar) newTopBar.scrollLeft = prevScrollLeft;
-    showToast(`Pembayaran ${member.name} diubah menjadi Rp0.`, 'info');
+    showToast(`Pembayaran ${member.name} pada ${evLabel} (Tgl: ${payDateText}) dibatalkan menjadi Rp0.`, 'info');
 }
 
 function handleAddTakziahMember(e) {
