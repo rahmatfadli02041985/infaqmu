@@ -101,8 +101,8 @@ function ensureTakziahMenuAndViewMounted() {
         storyBtn.className = 'flex flex-col items-center gap-1 shrink-0 group';
         storyBtn.innerHTML = `
             <div class="w-14 h-14 rounded-full p-0.5 bg-gradient-to-tr from-sky-500 to-indigo-600">
-                <div class="w-full h-full rounded-full bg-white flex items-center justify-center text-indigo-700 font-extrabold text-xs">
-                    TZ
+                <div class="w-full h-full rounded-full bg-white flex items-center justify-center text-indigo-700 font-extrabold text-[11px]">
+                    Iuran
                 </div>
             </div>
             <span class="text-[11px] font-medium text-slate-700 truncate max-w-[72px] text-center">Iuran Takziah</span>
