@@ -267,7 +267,9 @@ function renderWaExpenseRows() {
     const disAttr = isWaFormEditable ? '' : 'disabled';
 
     container.innerHTML = waFormState.expenses.map((item, idx) => {
-        const sub = Math.round((Number(item.qty) || 0) * parseIndoNumber(item.price));
+        const sub = (item.subtotal !== undefined && item.subtotal !== null)
+            ? parseIndoNumber(item.subtotal)
+            : Math.round((Number(item.qty) || 0) * parseIndoNumber(item.price));
         return `
             <div class="p-2.5 rounded-xl bg-white border border-amber-200 space-y-1.5">
                 <div class="flex items-center gap-1.5">
@@ -373,7 +375,9 @@ function buildWaReportCalculationFromState(reportObj) {
     const expenseLines = (reportObj.expenses || []).map(item => {
         const qty = Number(item.qty) || 0;
         const price = parseIndoNumber(item.price);
-        const subtotal = Math.round(qty * price);
+        const subtotal = (item.subtotal !== undefined && item.subtotal !== null)
+            ? parseIndoNumber(item.subtotal)
+            : Math.round(qty * price);
         totalExpenseAll += subtotal;
         const unitStr = item.unit ? ` ${item.unit}` : '';
         return `- ${item.name} ${qty}${unitStr} x Rp. ${formatIndoDots(price)} = Rp. ${formatIndoDots(subtotal)},-`;

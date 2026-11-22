@@ -207,6 +207,12 @@ function loadLocalFallbackData() {
         const w = localStorage.getItem(STORAGE_KEYS.WA_REPORTS);
         const defaultReports = getDefaultWaReports();
         waReportsStore = { ...defaultReports, ...(w ? JSON.parse(w) : {}) };
+        if (waReportsStore['2026-09'] && waReportsStore['2026-09'].expenses) {
+            const telur = waReportsStore['2026-09'].expenses.find(e => e.name && e.name.toLowerCase().includes('telur'));
+            if (telur) {
+                telur.subtotal = 394000;
+            }
+        }
 
         const l = localStorage.getItem(STORAGE_KEYS.LIKED_IDS);
         if (l) likedTxIds = new Set(JSON.parse(l));
@@ -382,6 +388,9 @@ function computeMonthlyLedgerBreakdown(includeLiveDraft = true) {
             }, 0);
 
             expense = (report.expenses || []).reduce((acc, item) => {
+                if (item.subtotal !== undefined && item.subtotal !== null) {
+                    return acc + parseIndoNumber(item.subtotal);
+                }
                 return acc + Math.round((Number(item.qty) || 0) * parseIndoNumber(item.price));
             }, 0);
 
@@ -543,12 +552,24 @@ function syncTopKpiCardsRealtime() {
     const storyInEl = document.getElementById('story-in-short');
     const storyOutEl = document.getElementById('story-out-short');
     const storyRatioEl = document.getElementById('story-ratio-short');
+    const checkBalBtn = document.getElementById('btn-check-balance');
 
-    if (balEl) balEl.textContent = formatShortRupiah(endingCashBalance);
+    // Tampilkan Saldo Kas Akhir Real secara tepat dan transparan
+    if (balEl) {
+        balEl.textContent = `Rp${formatIndoDots(endingCashBalance)}`;
+        balEl.title = `Saldo Kas Akhir Real: ${formatRupiah(endingCashBalance)}`;
+    }
     if (outEl) outEl.textContent = formatShortRupiah(displayOut);
-    if (storyBalEl) storyBalEl.textContent = formatShortRupiah(endingCashBalance);
+    if (storyBalEl) {
+        storyBalEl.textContent = `Rp${formatIndoDots(endingCashBalance)}`;
+        storyBalEl.title = `Saldo Kas Akhir Real: ${formatRupiah(endingCashBalance)}`;
+    }
     if (storyInEl) storyInEl.textContent = formatShortRupiah(displayIn);
     if (storyOutEl) storyOutEl.textContent = formatShortRupiah(displayOut);
+
+    if (checkBalBtn) {
+        checkBalBtn.title = `Saldo Kas Akhir Real: ${formatRupiah(endingCashBalance)}`;
+    }
 
     const ratio = totalCashAvailable > 0 ? Math.round((displayOut / totalCashAvailable) * 100) : 0;
     if (storyRatioEl) storyRatioEl.textContent = `${ratio}%`;

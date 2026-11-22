@@ -797,18 +797,18 @@ function renderStorySlide() {
     const bodyEl = document.getElementById('story-viewer-body');
 
     if (currentStorySlide === 0) {
-        titleEl.textContent = 'Posisi Saldo Akhir Kas';
+        titleEl.textContent = 'Posisi Saldo Kas Akhir';
         subEl.textContent = periodDesc;
         bodyEl.innerHTML = `
             <div class="text-center space-y-3">
-                <div class="text-xs uppercase tracking-wider text-emerald-300 font-bold">Saldo Akhir Kas (Buku Kas Umum)</div>
+                <div class="text-xs uppercase tracking-wider text-emerald-300 font-bold">Saldo Kas Akhir Real (Buku Kas Umum)</div>
                 <div class="font-display font-extrabold text-3xl text-white">${formatRupiah(closingBalVal)}</div>
                 <div class="p-3.5 rounded-2xl bg-white/10 text-left text-xs space-y-1.5">
                     <div class="flex justify-between"><span>Saldo Awal Periode:</span><span class="font-bold text-slate-200">${formatRupiah(openingVal)}</span></div>
                     <div class="flex justify-between"><span>Penerimaan Kas (+):</span><span class="font-bold text-emerald-300">+ ${formatRupiah(pureInVal)}</span></div>
                     <div class="border-t border-white/10 pt-1 flex justify-between text-slate-200"><span>Total Kas Tersedia:</span><span class="font-bold">${formatRupiah(totalAvailVal)}</span></div>
                     <div class="flex justify-between"><span>Pengeluaran Kas (-):</span><span class="font-bold text-amber-300">- ${formatRupiah(outVal)}</span></div>
-                    <div class="border-t border-white/15 pt-1.5 flex justify-between font-bold text-emerald-300"><span>Saldo Akhir Kas:</span><span>${formatRupiah(closingBalVal)}</span></div>
+                    <div class="border-t border-white/15 pt-1.5 flex justify-between font-bold text-emerald-300"><span>Saldo Kas Akhir Real:</span><span>${formatRupiah(closingBalVal)}</span></div>
                 </div>
             </div>
         `;

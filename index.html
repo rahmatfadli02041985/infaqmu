@@ -179,9 +179,9 @@
                         <div id="profile-stat-posts" class="font-display font-extrabold text-base text-slate-950">0</div>
                         <div class="text-[11px] text-slate-500 font-medium">Berita</div>
                     </button>
-                    <button type="button" onclick="openStoryViewer(0)" class="py-1 rounded-xl hover:bg-emerald-50/70">
-                        <div id="profile-stat-balance" class="font-display font-extrabold text-base text-emerald-700">Rp0</div>
-                        <div class="text-[11px] text-slate-500 font-medium">Saldo Kas</div>
+                    <button type="button" onclick="openStoryViewer(0)" class="py-1 rounded-xl hover:bg-emerald-50/70" title="Cek Saldo Kas Akhir">
+                        <div id="profile-stat-balance" class="font-display font-extrabold text-base text-emerald-700">Rp86.000</div>
+                        <div class="text-[11px] text-slate-500 font-medium">Saldo Kas Akhir</div>
                     </button>
                     <button type="button" onclick="openStoryViewer(2)" class="py-1 rounded-xl hover:bg-amber-50/70">
                         <div id="profile-stat-out" class="font-display font-extrabold text-base text-amber-700">Rp0</div>
@@ -201,8 +201,8 @@
             </div>
 
             <div class="grid grid-cols-2 gap-2 mt-3.5">
-                <button type="button" onclick="openStoryViewer(0)" class="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors">
-                    Cek Saldo Kas Aktif
+                <button type="button" id="btn-check-balance" onclick="openStoryViewer(0)" class="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors">
+                    Cek Saldo Kas Akhir
                 </button>
                 <button type="button" id="btn-profile-secondary" onclick="switchMainView('stats')" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-800 font-bold text-xs transition-colors">
                     Grafik Transparansi
@@ -216,10 +216,10 @@
                 <button type="button" onclick="openStoryViewer(0)" class="flex flex-col items-center gap-1.5 w-16 group">
                     <div class="w-14 h-14 rounded-full story-ring-emerald">
                         <div class="w-full h-full rounded-full bg-emerald-50 border-2 border-white flex flex-col items-center justify-center text-emerald-800">
-                            <span id="story-balance-short" class="font-display font-extrabold text-[11px]">Rp86Rb</span>
+                            <span id="story-balance-short" class="font-display font-extrabold text-[11px]">Rp86.000</span>
                         </div>
                     </div>
-                    <span class="text-[11px] font-semibold text-slate-700 truncate w-full text-center">Saldo Kas</span>
+                    <span class="text-[11px] font-semibold text-slate-700 truncate w-full text-center">Saldo Kas Akhir</span>
                 </button>
 
                 <button type="button" onclick="openStoryViewer(1)" class="flex flex-col items-center gap-1.5 w-16 group">
@@ -504,7 +504,7 @@
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 rounded-full bg-emerald-500 text-slate-950 font-display font-extrabold text-xs flex items-center justify-center">MU</div>
                     <div>
-                        <div id="story-viewer-title" class="text-xs font-bold">Saldo Kas Tersedia</div>
+                        <div id="story-viewer-title" class="text-xs font-bold">Saldo Kas Akhir</div>
                         <div id="story-viewer-subtitle" class="text-[10px] text-emerald-300">Audit Transparansi</div>
                     </div>
                 </div>

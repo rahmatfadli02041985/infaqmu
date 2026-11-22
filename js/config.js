@@ -8,9 +8,9 @@ const DEFAULT_SUPABASE_KEY = "sb_publishable_D0xmTYa3K7pO2d15zsdD_A_Tx-7bh9y";
 const STORAGE_KEYS = {
     SB_CONFIG: 'infaqmu_supabase_creds_v5',
     SETTINGS: 'infaqmu_local_settings_v5',
-    TRANSACTIONS: 'infaqmu_local_transactions_v6',
+    TRANSACTIONS: 'infaqmu_local_transactions_v7',
     LIKED_IDS: 'infaqmu_local_liked_v5',
-    WA_REPORTS: 'infaqmu_wa_reports_v6',
+    WA_REPORTS: 'infaqmu_wa_reports_v7',
     TAKZIAH: 'infaqmu_takziah_data_v1'
 };
 
@@ -537,7 +537,7 @@ function getDefaultWaReports() {
             expenses: [
                 { name: 'Beras Horas', qty: 19, unit: 'sak', price: 74000 },
                 { name: 'Minyakita', qty: 19, unit: 'bks', price: 16500 },
-                { name: 'Telur Ayam', qty: 239, unit: 'butir', price: 1650 }
+                { name: 'Telur Ayam', qty: 239, unit: 'butir', price: 1650, subtotal: 394000 }
             ]
         },
         '2026-10': {
