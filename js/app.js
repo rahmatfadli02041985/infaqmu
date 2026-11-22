@@ -519,16 +519,15 @@ function refreshDashboard() {
         return;
     }
 
+    // Urutkan semua berita secara descending (terbaru ke terlama)
+    const sortedNews = [...allFilteredNews].sort((a, b) => new Date(b.tx_date) - new Date(a.tx_date));
+
     if (feedLayoutMode === 'grid') {
-        // Galeri 3x3: berurut ascending (terlama ke terbaru)
-        const gridNews = [...allFilteredNews].sort((a, b) => new Date(a.tx_date) - new Date(b.tx_date));
         document.getElementById('grid-view').classList.remove('hidden');
-        renderInstagramGrid(gridNews);
+        renderInstagramGrid(sortedNews);
     } else {
-        // Beranda Berita: berurut descending (terbaru ke terlama)
-        const feedNews = [...allFilteredNews].sort((a, b) => new Date(b.tx_date) - new Date(a.tx_date));
         document.getElementById('feed-view').classList.remove('hidden');
-        renderInstagramFeed(feedNews);
+        renderInstagramFeed(sortedNews);
     }
 }
 
