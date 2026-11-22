@@ -235,8 +235,7 @@ function saveLocalCache() {
 
 function deduplicateMonthlyLedgerRecords() {
     const seenMonthlyKey = new Set();
-    const seenNewsKey = new Set();
-    const seenNewsDesc = new Set();
+    const seenNewsMonth = new Set();
     const cleaned = [];
 
     // Prioritaskan transaksi dari Cloud di atas data lokal, lalu ID terbaru
@@ -262,20 +261,11 @@ function deduplicateMonthlyLedgerRecords() {
                 seenMonthlyKey.add(key);
             }
         } else if (tx.type === 'news') {
-            // Deduplikasi postingan berita pada tiap bulannya
-            const newsKey = `${ym}::${titleNorm}`;
-            const descSnip = (tx.description || '').trim().toLowerCase().slice(0, 50);
-            const descKey = descSnip ? `${ym}::desc::${descSnip}` : null;
-
-            if (titleNorm && seenNewsKey.has(newsKey)) {
-                continue; // Duplikat judul pada bulan yang sama
+            // Setiap bulan hanya ada tepat 1 postingan berita (jika ada 2 atau lebih, simpan satu dan hapus yang lain)
+            if (seenNewsMonth.has(ym)) {
+                continue;
             }
-            if (descKey && seenNewsDesc.has(descKey)) {
-                continue; // Duplikat isi/deskripsi pada bulan yang sama
-            }
-
-            if (titleNorm) seenNewsKey.add(newsKey);
-            if (descKey) seenNewsDesc.add(descKey);
+            seenNewsMonth.add(ym);
         }
         cleaned.push(tx);
     }
