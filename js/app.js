@@ -416,7 +416,7 @@ function clearSearch() {
 
 function switchMainView(view) {
     if (view === 'wa' && currentRole !== 'admin') {
-        showToast('Menu Rekap WA khusus untuk Panitia / Admin.', 'error');
+        showToast('Menu Laporan InfaqMu khusus untuk Panitia / Admin.', 'error');
         return;
     }
     currentMainView = view;
