@@ -6,8 +6,19 @@ node_modules/
 .env.local
 .env.*.local
 
-# Build / logs (opsional, sesuai framework)
+# Build / logs
 .next/
 dist/
 build/
 *.log
+
+# Archive (file lama yang tidak terpakai)
+_archive/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+*.swp

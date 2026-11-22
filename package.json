@@ -1,0 +1,10 @@
+{
+  "name": "infaqmu",
+  "version": "4.0.0",
+  "description": "InfaqMU Peduli — Transparansi Infaq & Sedekah Cloud",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve .",
+    "start": "npx serve ."
+  }
+}
