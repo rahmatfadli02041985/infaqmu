@@ -584,7 +584,7 @@ function renderInstagramFeed(list) {
         ` : '';
 
         return `
-            <article class="bg-white py-4 px-4">
+            <article id="post-${txKey}" class="bg-white py-4 px-4 scroll-mt-24">
                 <div class="flex items-center justify-between mb-2.5">
                     <div class="flex items-center gap-2.5">
                         <div class="w-9 h-9 rounded-full story-ring-ig">
@@ -638,12 +638,25 @@ function renderInstagramFeed(list) {
     }).join('');
 }
 
+function openPostInFullMode(txKey) {
+    const key = String(txKey);
+    expandedPosterIds.add(key);
+    setFeedLayoutMode('feed');
+    setTimeout(() => {
+        const targetEl = document.getElementById(`post-${key}`);
+        if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 120);
+}
+
 function renderInstagramGrid(list) {
     const container = document.getElementById('grid-view');
     container.innerHTML = list.map(tx => {
+        const txKey = String(tx.id);
         const grad = getThemeGradient(tx.theme);
         return `
-            <button type="button" onclick="setFeedLayoutMode('feed')" class="aspect-square bg-gradient-to-br ${grad} p-2.5 text-left text-white flex flex-col justify-between overflow-hidden relative">
+            <button type="button" onclick="openPostInFullMode('${txKey}')" class="aspect-square bg-gradient-to-br ${grad} p-2.5 text-left text-white flex flex-col justify-between overflow-hidden relative active:scale-95 transition-transform cursor-pointer">
                 <span class="text-[9px] font-bold uppercase bg-black/25 px-1.5 py-0.5 rounded w-fit">${escapeHtml(tx.category)}</span>
                 <div class="font-display font-bold text-[11px] leading-tight line-clamp-3">${escapeHtml(tx.title)}</div>
             </button>
