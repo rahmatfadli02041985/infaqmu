@@ -472,6 +472,11 @@ function refreshDashboard() {
         : `${MONTH_NAMES[parseInt(selectedMonth, 10) - 1]} ${selectedYear}`;
     document.getElementById('active-period-badge').textContent = periodLabel;
 
+    const periodFilterSection = document.getElementById('period-filter-section');
+    if (periodFilterSection) {
+        periodFilterSection.classList.toggle('hidden', currentMainView !== 'stats');
+    }
+
     ensureTakziahMenuAndViewMounted();
     document.getElementById('feed-view').classList.add('hidden');
     document.getElementById('grid-view').classList.add('hidden');
