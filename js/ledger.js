@@ -122,6 +122,11 @@ async function syncInitialData(showNotification = false) {
                 return !cloudSignatures.has(sig);
             });
             transactions = [...cloudMapped, ...localOnly];
+            transactions.forEach(t => {
+                if (t.type === 'news' && t.tx_date && t.tx_date <= '2026-10-31') {
+                    t.category = 'Laporan Keuangan Bulanan';
+                }
+            });
             deduplicateMonthlyLedgerRecords();
             ensureAllMonthlyNewsPresent();
             syncWaReportsStoreFromTransactions();
@@ -200,10 +205,17 @@ function loadLocalFallbackData() {
         transactions = t ? JSON.parse(t) : getDefaultDummyData();
 
         const w = localStorage.getItem(STORAGE_KEYS.WA_REPORTS);
-        waReportsStore = w ? JSON.parse(w) : getDefaultWaReports();
+        const defaultReports = getDefaultWaReports();
+        waReportsStore = { ...defaultReports, ...(w ? JSON.parse(w) : {}) };
 
         const l = localStorage.getItem(STORAGE_KEYS.LIKED_IDS);
         if (l) likedTxIds = new Set(JSON.parse(l));
+
+        transactions.forEach(t => {
+            if (t.type === 'news' && t.tx_date && t.tx_date <= '2026-10-31') {
+                t.category = 'Laporan Keuangan Bulanan';
+            }
+        });
 
         deduplicateMonthlyLedgerRecords();
         ensureAllMonthlyNewsPresent();

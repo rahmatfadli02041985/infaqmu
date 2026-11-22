@@ -416,18 +416,17 @@ function buildWaReportCalculationAndText() {
 }
 
 function getWaPreviewTextForPost(tx) {
-    const filterMonthEl = document.getElementById('filter-month');
-    const filterYearEl = document.getElementById('filter-year');
-    const selectedMonth = filterMonthEl ? filterMonthEl.value : 'all';
-    const selectedYear = filterYearEl ? filterYearEl.value : '2026';
-
     let targetYm = '';
-    if (selectedMonth && selectedMonth !== 'all') {
-        targetYm = `${selectedYear}-${selectedMonth}`;
-    } else if (tx && tx.tx_date && tx.tx_date.length >= 7) {
+    if (tx && tx.tx_date && tx.tx_date.length >= 7) {
         targetYm = tx.tx_date.substring(0, 7);
     } else {
-        targetYm = `${waFormState.year}-${waFormState.month}`;
+        const filterMonthEl = document.getElementById('filter-month');
+        const filterYearEl = document.getElementById('filter-year');
+        const selectedMonth = filterMonthEl ? filterMonthEl.value : 'all';
+        const selectedYear = filterYearEl ? filterYearEl.value : '2026';
+        targetYm = (selectedMonth && selectedMonth !== 'all')
+            ? `${selectedYear}-${selectedMonth}`
+            : `${waFormState.year}-${waFormState.month}`;
     }
 
     const [y, m] = targetYm.split('-');
@@ -437,7 +436,7 @@ function getWaPreviewTextForPost(tx) {
     const autoCarryBalance = getEndingBalanceBeforePeriod(y, m);
 
     let reportData = null;
-    if (waFormState && `${waFormState.year}-${waFormState.month}` === targetYm) {
+    if (currentMainView === 'wa' && waFormState && `${waFormState.year}-${waFormState.month}` === targetYm) {
         reportData = JSON.parse(JSON.stringify(waFormState));
     } else if (waReportsStore[targetYm]) {
         reportData = JSON.parse(JSON.stringify(waReportsStore[targetYm]));
