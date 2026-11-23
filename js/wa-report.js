@@ -3,35 +3,28 @@
 // =====================================================================
 
 function setupStickyWaPeriodHeader() {
+    const cardEl = document.getElementById('wa-period-selector-card');
     const monthEl = document.getElementById('wa-input-month');
-    const yearEl = document.getElementById('wa-input-year');
-    if (!monthEl || !yearEl) return;
-
-    const periodGrid = monthEl.closest('.grid') || monthEl.parentElement?.parentElement;
-    if (!periodGrid || periodGrid.dataset.stickyApplied === 'true') return;
-    periodGrid.dataset.stickyApplied = 'true';
+    const targetEl = cardEl || monthEl?.closest('.grid');
+    if (!targetEl || targetEl.dataset.stickyApplied === 'true') return;
+    targetEl.dataset.stickyApplied = 'true';
 
     const mainHeader = document.querySelector('#main-app header');
     const headerHeight = mainHeader ? mainHeader.offsetHeight : 56;
 
-    periodGrid.classList.add(
+    targetEl.classList.add(
         'sticky',
-        'z-30',
+        'z-20',
         'bg-white/95',
         'backdrop-blur-md',
-        'py-2.5',
-        '-mx-3',
-        'px-3',
-        'border-b',
-        'border-slate-200/80',
-        'shadow-sm',
+        'shadow-xs',
         'transition-all'
     );
-    periodGrid.style.top = `${headerHeight}px`;
+    targetEl.style.top = `${headerHeight + 6}px`;
 
     const waView = document.getElementById('wa-view');
     if (waView) {
-        let el = periodGrid.parentElement;
+        let el = targetEl.parentElement;
         while (el && el !== waView.parentElement) {
             if (getComputedStyle(el).overflow === 'hidden' || getComputedStyle(el).overflowY === 'hidden') {
                 el.style.overflow = 'visible';
@@ -42,7 +35,7 @@ function setupStickyWaPeriodHeader() {
 
     window.addEventListener('resize', () => {
         const h = mainHeader ? mainHeader.offsetHeight : 56;
-        periodGrid.style.top = `${h}px`;
+        targetEl.style.top = `${h + 6}px`;
     });
 }
 

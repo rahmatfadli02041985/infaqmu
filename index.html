@@ -341,25 +341,12 @@
 
             <div id="wa-published-months-bar" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1"></div>
 
-            <div id="wa-admin-editor-box" class="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 wa-form-locked">
-                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <span id="wa-lock-status-badge" class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600">
-                        <span>Terkunci (Mode Baca)</span>
-                    </span>
-                    <div class="flex items-center gap-1.5">
-                        <button type="button" id="btn-toggle-wa-edit" onclick="toggleWaFormEditMode(true)" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs">
-                            Edit Rincian
-                        </button>
-                        <button type="button" id="btn-cancel-wa-edit" onclick="cancelWaFormEdit()" class="hidden px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">
-                            Batal Edit
-                        </button>
-                    </div>
-                </div>
-
+            <!-- KARTU PILIHAN BULAN & TAHUN LAPORAN (UNTUK JAMAAH & ADMIN) -->
+            <div id="wa-period-selector-card" class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-xs">
                 <div class="grid grid-cols-2 gap-2.5">
                     <div>
                         <label class="block text-[11px] font-bold text-slate-600 mb-1">Bulan Laporan</label>
-                        <select id="wa-input-month" onchange="onWaPeriodSelectChange()" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold bg-white outline-none">
+                        <select id="wa-input-month" onchange="onWaPeriodSelectChange()" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold bg-white outline-none focus:border-emerald-500">
                             <option value="01">Januari</option>
                             <option value="02">Februari</option>
                             <option value="03">Maret</option>
@@ -376,7 +363,23 @@
                     </div>
                     <div>
                         <label class="block text-[11px] font-bold text-slate-600 mb-1">Tahun</label>
-                        <input type="number" id="wa-input-year" value="2026" onchange="onWaPeriodSelectChange()" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold outline-none">
+                        <input type="number" id="wa-input-year" value="2026" onchange="onWaPeriodSelectChange()" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold bg-white outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+            </div>
+
+            <div id="wa-admin-editor-box" class="bg-white rounded-2xl border border-slate-200 p-4 space-y-4 wa-form-locked">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <span id="wa-lock-status-badge" class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                        <span>Terkunci (Mode Baca)</span>
+                    </span>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" id="btn-toggle-wa-edit" onclick="toggleWaFormEditMode(true)" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs">
+                            Edit Rincian
+                        </button>
+                        <button type="button" id="btn-cancel-wa-edit" onclick="cancelWaFormEdit()" class="hidden px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">
+                            Batal Edit
+                        </button>
                     </div>
                 </div>
 
