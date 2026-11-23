@@ -499,6 +499,12 @@ function switchMainView(view) {
         setTimeout(setupStickyWaPeriodHeader, 50);
     }
 
+    if (view === 'jurnal') {
+        if (typeof setupStickyJurnalHeader === 'function') {
+            setTimeout(setupStickyJurnalHeader, 50);
+        }
+    }
+
     refreshDashboard();
 }
 

@@ -2453,25 +2453,27 @@ function renderJurnalView() {
 
     // Render HTML
     container.innerHTML = `
-        <!-- HEADER JURNAL KAS -->
-        <div class="p-4 rounded-2xl bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-900 text-white shadow-md">
-            <div class="flex items-center justify-between">
-                <div>
-                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
-                        Buku Kas Umum
-                    </span>
-                    <h2 class="font-display font-extrabold text-base sm:text-lg mt-1 text-white">
-                        Jurnal Kas Masuk & Kas Keluar
-                    </h2>
+        <!-- HEADER JURNAL KAS (TERKUNCI / STICKY DI ATAS) -->
+        <div id="jurnal-header-card-wrapper" class="sticky top-[56px] z-20 -mx-4 px-4 py-1.5 bg-white/95 backdrop-blur-md transition-all shadow-2xs">
+            <div id="jurnal-header-banner" class="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-900 text-white shadow-md border border-emerald-900/40">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
+                            Buku Kas Umum
+                        </span>
+                        <h2 class="font-display font-extrabold text-base sm:text-lg mt-0.5 text-white">
+                            Jurnal Kas Masuk & Kas Keluar
+                        </h2>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="text-[11px] font-semibold text-emerald-300 block">Total ${allChronological.length} Transaksi</span>
+                        <span class="text-[10px] text-slate-300">2023 - 2026</span>
+                    </div>
                 </div>
-                <div class="text-right">
-                    <span class="text-[11px] font-semibold text-emerald-300 block">Total ${allChronological.length} Transaksi</span>
-                    <span class="text-[10px] text-slate-300">2023 - 2026</span>
-                </div>
+                <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Laporan catatan keuangan resmi arus kas masuk (penerimaan), kas keluar (pengeluaran), serta saldo kas kumulatif InfaqMu.
+                </p>
             </div>
-            <p class="text-xs text-slate-300 mt-1 leading-relaxed">
-                Laporan catatan keuangan resmi arus kas masuk (penerimaan), kas keluar (pengeluaran), serta saldo kas kumulatif InfaqMu.
-            </p>
         </div>
 
         <!-- 3 KPI RINGKASAN KAS -->
@@ -2720,6 +2722,20 @@ function renderJurnalView() {
             </div>
         ` : ''}
     `;
+
+    setTimeout(setupStickyJurnalHeader, 20);
+}
+
+function setupStickyJurnalHeader() {
+    const wrapper = document.getElementById('jurnal-header-card-wrapper');
+    if (!wrapper) return;
+    const mainHeader = document.querySelector('#main-app header');
+    const headerHeight = mainHeader ? mainHeader.offsetHeight : 56;
+    wrapper.style.top = `${headerHeight}px`;
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('resize', setupStickyJurnalHeader);
 }
 
 function getJurnalCategoryBadgeClass(category) {
