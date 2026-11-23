@@ -2395,6 +2395,13 @@ function resetJurnalFilters() {
     renderJurnalView();
 }
 
+let isJurnalFilterCollapsed = false;
+
+function toggleJurnalFilterCollapse() {
+    isJurnalFilterCollapsed = !isJurnalFilterCollapsed;
+    renderJurnalView();
+}
+
 function renderJurnalView() {
     const container = document.getElementById('jurnal-view');
     if (!container) return;
@@ -2509,12 +2516,20 @@ function renderJurnalView() {
         <!-- FILTER & PENCARIAN CONTROLS (NO-PRINT) -->
         <div class="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-3 shadow-xs no-print">
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <span class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-                    </svg>
-                    Filter & Pencarian Jurnal
-                </span>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                        </svg>
+                        Filter & Pencarian Jurnal
+                    </span>
+                    <button type="button" onclick="toggleJurnalFilterCollapse()" class="px-2 py-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-200 transition-colors flex items-center gap-1">
+                        <span>${isJurnalFilterCollapsed ? 'Tampilkan Filter' : 'Sembunyikan Filter'}</span>
+                        <svg class="w-3.5 h-3.5 transition-transform duration-200 ${isJurnalFilterCollapsed ? '' : 'rotate-180'}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                </div>
                 <div class="flex items-center gap-1.5">
                     <button type="button" onclick="resetJurnalFilters()" class="text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:underline">
                         Reset Filter
@@ -2527,106 +2542,95 @@ function renderJurnalView() {
                 </div>
             </div>
 
-            <div class="relative">
-                <input type="text"
-                    id="jurnal-search-input"
-                    value="${escapeHtml(jurnalFilter.search)}"
-                    oninput="setJurnalFilter('search', this.value)"
-                    placeholder="Cari transaksi, keterangan, nama jamaah, atau kategori..."
-                    class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-emerald-500 bg-slate-50/50">
-                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                </svg>
-            </div>
+            <div id="jurnal-filter-body" class="${isJurnalFilterCollapsed ? 'hidden' : 'space-y-3 pt-1'}">
+                <div class="relative">
+                    <input type="text"
+                        id="jurnal-search-input"
+                        value="${escapeHtml(jurnalFilter.search)}"
+                        oninput="setJurnalFilter('search', this.value)"
+                        placeholder="Cari transaksi, keterangan, nama jamaah, atau kategori..."
+                        class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-emerald-500 bg-slate-50/50">
+                    <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Tahun</label>
-                    <select onchange="setJurnalFilter('year', this.value)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-800 outline-none">
-                        <option value="all" ${jurnalFilter.year === 'all' ? 'selected' : ''}>Semua Tahun</option>
-                        ${uniqueYears.map(y => `<option value="${y}" ${jurnalFilter.year === y ? 'selected' : ''}>${y}</option>`).join('')}
-                    </select>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Tahun</label>
+                        <select onchange="setJurnalFilter('year', this.value)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-800 outline-none">
+                            <option value="all" ${jurnalFilter.year === 'all' ? 'selected' : ''}>Semua Tahun</option>
+                            ${uniqueYears.map(y => `<option value="${y}" ${jurnalFilter.year === y ? 'selected' : ''}>${y}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Bulan</label>
+                        <select onchange="setJurnalFilter('month', this.value)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-800 outline-none">
+                            <option value="all" ${jurnalFilter.month === 'all' ? 'selected' : ''}>Semua Bulan</option>
+                            <option value="01" ${jurnalFilter.month === '01' ? 'selected' : ''}>01 - Januari</option>
+                            <option value="02" ${jurnalFilter.month === '02' ? 'selected' : ''}>02 - Februari</option>
+                            <option value="03" ${jurnalFilter.month === '03' ? 'selected' : ''}>03 - Maret</option>
+                            <option value="04" ${jurnalFilter.month === '04' ? 'selected' : ''}>04 - April</option>
+                            <option value="05" ${jurnalFilter.month === '05' ? 'selected' : ''}>05 - Mei</option>
+                            <option value="06" ${jurnalFilter.month === '06' ? 'selected' : ''}>06 - Juni</option>
+                            <option value="07" ${jurnalFilter.month === '07' ? 'selected' : ''}>07 - Juli</option>
+                            <option value="08" ${jurnalFilter.month === '08' ? 'selected' : ''}>08 - Agustus</option>
+                            <option value="09" ${jurnalFilter.month === '09' ? 'selected' : ''}>09 - September</option>
+                            <option value="10" ${jurnalFilter.month === '10' ? 'selected' : ''}>10 - Oktober</option>
+                            <option value="11" ${jurnalFilter.month === '11' ? 'selected' : ''}>11 - November</option>
+                            <option value="12" ${jurnalFilter.month === '12' ? 'selected' : ''}>12 - Desember</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Jenis Kas</label>
+                        <select onchange="setJurnalFilter('type', this.value)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-800 outline-none">
+                            <option value="all" ${jurnalFilter.type === 'all' ? 'selected' : ''}>Semua (Masuk & Keluar)</option>
+                            <option value="in" ${jurnalFilter.type === 'in' ? 'selected' : ''}>Kas Masuk (+)</option>
+                            <option value="out" ${jurnalFilter.type === 'out' ? 'selected' : ''}>Kas Keluar (-)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Urutan No</label>
+                        <select onchange="setJurnalFilter('sort', this.value)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-800 outline-none">
+                            <option value="asc" ${jurnalFilter.sort === 'asc' ? 'selected' : ''}>No 1 → ${allChronological.length} (Awal)</option>
+                            <option value="desc" ${jurnalFilter.sort === 'desc' ? 'selected' : ''}>Terbaru → Terlama</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Bulan</label>
-                    <select onchange="setJurnalFilter('month', this.value)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-800 outline-none">
-                        <option value="all" ${jurnalFilter.month === 'all' ? 'selected' : ''}>Semua Bulan</option>
-                        <option value="01" ${jurnalFilter.month === '01' ? 'selected' : ''}>01 - Januari</option>
-                        <option value="02" ${jurnalFilter.month === '02' ? 'selected' : ''}>02 - Februari</option>
-                        <option value="03" ${jurnalFilter.month === '03' ? 'selected' : ''}>03 - Maret</option>
-                        <option value="04" ${jurnalFilter.month === '04' ? 'selected' : ''}>04 - April</option>
-                        <option value="05" ${jurnalFilter.month === '05' ? 'selected' : ''}>05 - Mei</option>
-                        <option value="06" ${jurnalFilter.month === '06' ? 'selected' : ''}>06 - Juni</option>
-                        <option value="07" ${jurnalFilter.month === '07' ? 'selected' : ''}>07 - Juli</option>
-                        <option value="08" ${jurnalFilter.month === '08' ? 'selected' : ''}>08 - Agustus</option>
-                        <option value="09" ${jurnalFilter.month === '09' ? 'selected' : ''}>09 - September</option>
-                        <option value="10" ${jurnalFilter.month === '10' ? 'selected' : ''}>10 - Oktober</option>
-                        <option value="11" ${jurnalFilter.month === '11' ? 'selected' : ''}>11 - November</option>
-                        <option value="12" ${jurnalFilter.month === '12' ? 'selected' : ''}>12 - Desember</option>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Kategori Transaksi</label>
+                    <select onchange="setJurnalFilter('category', this.value)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-800 outline-none">
+                        <option value="all" ${jurnalFilter.category === 'all' ? 'selected' : ''}>Semua Kategori</option>
+                        ${uniqueCats.map(cat => `<option value="${cat}" ${jurnalFilter.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
                     </select>
                 </div>
 
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Jenis Kas</label>
-                    <select onchange="setJurnalFilter('type', this.value)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-800 outline-none">
-                        <option value="all" ${jurnalFilter.type === 'all' ? 'selected' : ''}>Semua (Masuk & Keluar)</option>
-                        <option value="in" ${jurnalFilter.type === 'in' ? 'selected' : ''}>Kas Masuk (+)</option>
-                        <option value="out" ${jurnalFilter.type === 'out' ? 'selected' : ''}>Kas Keluar (-)</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Urutan No</label>
-                    <select onchange="setJurnalFilter('sort', this.value)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-800 outline-none">
-                        <option value="asc" ${jurnalFilter.sort === 'asc' ? 'selected' : ''}>No 1 → 191 (Awal)</option>
-                        <option value="desc" ${jurnalFilter.sort === 'desc' ? 'selected' : ''}>Terbaru → Terlama</option>
-                    </select>
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Kategori Transaksi</label>
-                <select onchange="setJurnalFilter('category', this.value)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-800 outline-none">
-                    <option value="all" ${jurnalFilter.category === 'all' ? 'selected' : ''}>Semua Kategori</option>
-                    ${uniqueCats.map(cat => `<option value="${cat}" ${jurnalFilter.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
-                </select>
-            </div>
-
-            <!-- TOMBOL EKSPOR & AKSI -->
-            <div class="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-slate-100">
-                <span class="text-[11px] font-semibold text-slate-500">
-                    Menampilkan <strong>${filtered.length}</strong> dari ${allChronological.length} transaksi
-                </span>
-                <div class="flex items-center gap-1.5">
-                    <button type="button" onclick="copyJurnalSummaryText()" class="px-2.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs">
-                        Salin Rekap
-                    </button>
-                    <button type="button" onclick="exportJurnalToCSV()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">
-                        Unduh CSV
-                    </button>
-                    <button type="button" onclick="window.print()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">
-                        Cetak
-                    </button>
+                <!-- TOMBOL EKSPOR & AKSI -->
+                <div class="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-slate-100">
+                    <span class="text-[11px] font-semibold text-slate-500">
+                        Menampilkan <strong>${filtered.length}</strong> dari ${allChronological.length} transaksi
+                    </span>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="copyJurnalSummaryText()" class="px-2.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs">
+                            Salin Rekap
+                        </button>
+                        <button type="button" onclick="exportJurnalToCSV()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">
+                            Unduh CSV
+                        </button>
+                        <button type="button" onclick="window.print()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">
+                            Cetak
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- TABEL JURNAL KAS AKUNTANSI -->
         <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-            <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                <div>
-                    <h3 class="font-display font-extrabold text-sm text-slate-900">Buku Jurnal Kas InfaqMu</h3>
-                    <p class="text-[11px] text-slate-500">Kolom Kas Masuk, Kas Keluar, dan Saldo Berjalan</p>
-                </div>
-                <div class="text-right">
-                    <span class="text-[10px] font-bold text-slate-600 block">Sisa Saldo Hasil Filter:</span>
-                    <span class="font-display font-extrabold text-xs ${filteredNet >= 0 ? 'text-emerald-700' : 'text-rose-700'}">
-                        Rp${formatIndoDots(filteredNet)}
-                    </span>
-                </div>
-            </div>
-
             <div class="overflow-x-auto no-scrollbar">
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
@@ -2636,17 +2640,18 @@ function renderJurnalView() {
                             <th class="py-2.5 px-3 border-r border-slate-800 min-w-[200px]">Keterangan & Kategori</th>
                             <th class="py-2.5 px-3 text-right border-r border-slate-800 text-emerald-300 w-28">Kas Masuk</th>
                             <th class="py-2.5 px-3 text-right border-r border-slate-800 text-rose-300 w-28">Kas Keluar</th>
-                            <th class="py-2.5 px-3 text-right text-teal-300 w-32">Saldo Kas</th>
+                            <th class="py-2.5 px-3 text-right ${isAdmin ? 'border-r border-slate-800' : ''} text-teal-300 w-32">Saldo Kas</th>
+                            ${isAdmin ? `<th class="py-2.5 px-2 text-center text-amber-300 w-24 no-print">Aksi Admin</th>` : ''}
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 font-medium">
                         ${filtered.length === 0 ? `
                             <tr>
-                                <td colspan="6" class="py-8 text-center text-slate-400 text-xs">
+                                <td colspan="${isAdmin ? 7 : 6}" class="py-8 text-center text-slate-400 text-xs">
                                     Tidak ada data transaksi yang cocok dengan filter.
                                 </td>
                             </tr>
-                        ` : filtered.map((item, idx) => {
+                        ` : filtered.map((item) => {
                             const isMasuk = item.in > 0;
                             const isKeluar = item.out > 0;
                             const catBadgeCls = getJurnalCategoryBadgeClass(item.category);
@@ -2672,9 +2677,25 @@ function renderJurnalView() {
                                     <td class="py-2.5 px-3 text-right border-r border-slate-100 whitespace-nowrap font-bold ${isKeluar ? 'text-rose-700 bg-rose-50/30' : 'text-slate-300'}">
                                         ${isKeluar ? '- Rp' + formatIndoDots(item.out) : '-'}
                                     </td>
-                                    <td class="py-2.5 px-3 text-right whitespace-nowrap font-extrabold text-slate-900 bg-slate-50/20">
+                                    <td class="py-2.5 px-3 text-right ${isAdmin ? 'border-r border-slate-100' : ''} whitespace-nowrap font-extrabold text-slate-900 bg-slate-50/20">
                                         Rp${formatIndoDots(item.runningBalance)}
                                     </td>
+                                    ${isAdmin ? `
+                                        <td class="py-2 px-2 text-center whitespace-nowrap no-print">
+                                            <div class="flex items-center justify-center gap-1">
+                                                <button type="button" onclick="openEditJurnalModal('${item.id}')" title="Edit Transaksi" class="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-colors">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                    </svg>
+                                                </button>
+                                                <button type="button" onclick="confirmDeleteJurnalItem('${item.id}')" title="Hapus Transaksi" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    ` : ''}
                                 </tr>
                             `;
                         }).join('')}
@@ -2690,9 +2711,10 @@ function renderJurnalView() {
                             <td class="py-3 px-3 text-right border-r border-slate-800 text-rose-400 whitespace-nowrap">
                                 - Rp${formatIndoDots(filteredOut)}
                             </td>
-                            <td class="py-3 px-3 text-right text-teal-300 whitespace-nowrap">
+                            <td class="py-3 px-3 text-right ${isAdmin ? 'border-r border-slate-800' : ''} text-teal-300 whitespace-nowrap">
                                 Rp${formatIndoDots(filteredNet)}
                             </td>
+                            ${isAdmin ? `<td class="no-print border-l border-slate-800"></td>` : ''}
                         </tr>
                         <tr class="bg-slate-900 text-slate-200 font-extrabold text-[11px] border-t border-slate-800">
                             <td colspan="3" class="py-2.5 px-3 text-right border-r border-slate-800">
@@ -2704,9 +2726,10 @@ function renderJurnalView() {
                             <td class="py-2.5 px-3 text-right border-r border-slate-800 text-rose-300 whitespace-nowrap">
                                 Rp${formatIndoDots(grandTotalOut)}
                             </td>
-                            <td class="py-2.5 px-3 text-right text-emerald-300 whitespace-nowrap font-bold text-xs">
+                            <td class="py-2.5 px-3 text-right ${isAdmin ? 'border-r border-slate-800' : ''} text-emerald-300 whitespace-nowrap font-bold text-xs">
                                 Rp${formatIndoDots(grandTotalBalance)}
                             </td>
+                            ${isAdmin ? `<td class="no-print border-l border-slate-800"></td>` : ''}
                         </tr>
                     </tfoot>
                 </table>
@@ -2715,7 +2738,7 @@ function renderJurnalView() {
 
         ${isAdmin ? `
             <div class="p-3 bg-slate-100 rounded-xl flex items-center justify-between text-xs text-slate-600 no-print">
-                <span>Mode Admin Aktif: Anda dapat menambah transaksi atau memulihkan data jika diperlukan.</span>
+                <span>Mode Admin Aktif: Anda dapat menambah, mengedit, atau menghapus transaksi.</span>
                 <button type="button" onclick="resetJurnalKasToDefault()" class="px-2 py-1 rounded bg-white hover:bg-slate-200 text-rose-700 font-bold text-[11px] border border-slate-300">
                     Reset 191 Data Awal
                 </button>
@@ -2908,4 +2931,135 @@ function handleSaveNewJurnalTransaction(e) {
     closeAddJurnalModal();
     renderJurnalView();
     showToast(`Transaksi berhasil ditambahkan ke Jurnal Kas (#${nextNo})!`, 'success');
+}
+
+// Modal Edit Transaksi Kas
+function openEditJurnalModal(itemId) {
+    if (currentRole !== 'admin') return;
+    const item = jurnalKasState.find(it => it.id === itemId);
+    if (!item) return;
+
+    let isoDateVal = item.isoDate;
+    if (!isoDateVal && item.date) {
+        const parts = item.date.split('/');
+        if (parts.length === 3) {
+            isoDateVal = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+    }
+
+    const modalId = 'modal-edit-jurnal-transaction';
+    let modal = document.getElementById(modalId);
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4';
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+        <div class="bg-white rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                    <h3 class="font-display font-extrabold text-base text-slate-900">Edit Transaksi Jurnal Kas</h3>
+                    <span class="text-[11px] font-bold text-emerald-700">Transaksi #${item.no}</span>
+                </div>
+                <button type="button" onclick="closeEditJurnalModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 font-bold">×</button>
+            </div>
+            <form id="form-edit-jurnal" onsubmit="handleUpdateJurnalTransaction(event, '${item.id}')" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal Transaksi</label>
+                    <input type="date" id="edit-jurnal-date" required value="${isoDateVal || ''}" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Jenis Kas</label>
+                    <select id="edit-jurnal-type" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold outline-none focus:border-emerald-500">
+                        <option value="in" ${item.type === 'in' ? 'selected' : ''}>Kas Masuk (Penerimaan / Infaq)</option>
+                        <option value="out" ${item.type === 'out' ? 'selected' : ''}>Kas Keluar (Pengeluaran / Biaya)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Nominal (Rp)</label>
+                    <input type="text" id="edit-jurnal-amount" required value="${formatIndoDots(item.amount || item.in || item.out)}" placeholder="Contoh: 100.000" oninput="formatMoneyInputLive(this)" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Kategori</label>
+                    <input type="text" id="edit-jurnal-category" required value="${escapeHtml(item.category || '')}" placeholder="Contoh: Infaq Tabung Pengajian / Iuran Takziah" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Keterangan Lengkap</label>
+                    <textarea id="edit-jurnal-desc" required rows="2" placeholder="Tuliskan keterangan detail transaksi..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold outline-none focus:border-emerald-500">${escapeHtml(item.desc || '')}</textarea>
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeEditJurnalModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">Batal</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    `;
+    modal.classList.remove('hidden');
+}
+
+function closeEditJurnalModal() {
+    const modal = document.getElementById('modal-edit-jurnal-transaction');
+    if (modal) modal.classList.add('hidden');
+}
+
+function handleUpdateJurnalTransaction(e, itemId) {
+    e.preventDefault();
+    if (currentRole !== 'admin') return;
+
+    const item = jurnalKasState.find(it => it.id === itemId);
+    if (!item) return;
+
+    const dateVal = document.getElementById('edit-jurnal-date').value;
+    const typeVal = document.getElementById('edit-jurnal-type').value;
+    const amountVal = parseIndoNumber(document.getElementById('edit-jurnal-amount').value);
+    const catVal = document.getElementById('edit-jurnal-category').value.trim();
+    const descVal = document.getElementById('edit-jurnal-desc').value.trim();
+
+    if (!amountVal || amountVal <= 0) {
+        showToast('Nominal harus lebih dari 0.', 'error');
+        return;
+    }
+
+    const [y, m, d] = dateVal.split('-');
+    item.date = `${d}/${m}/${y}`;
+    item.isoDate = dateVal;
+    item.type = typeVal;
+    item.amount = amountVal;
+    item.in = typeVal === 'in' ? amountVal : 0;
+    item.out = typeVal === 'out' ? amountVal : 0;
+    item.category = catVal;
+    item.desc = descVal;
+
+    saveJurnalKasState();
+    closeEditJurnalModal();
+    renderJurnalView();
+    showToast(`Transaksi #${item.no} berhasil diperbarui!`, 'success');
+}
+
+async function confirmDeleteJurnalItem(itemId) {
+    if (currentRole !== 'admin') return;
+    const item = jurnalKasState.find(it => it.id === itemId);
+    if (!item) return;
+
+    const typeLabel = item.type === 'in' ? 'Kas Masuk (+)' : 'Kas Keluar (-)';
+    const ok = await showInAppDialog({
+        title: 'Hapus Transaksi Jurnal',
+        message: `Apakah Anda yakin ingin menghapus transaksi #${item.no} (${item.date})?\n\n"${item.desc}"\nNominal: ${typeLabel} Rp${formatIndoDots(item.amount || item.in || item.out)}`,
+        confirmText: 'Hapus Transaksi',
+        cancelText: 'Batal'
+    });
+    if (!ok) return;
+
+    const deletedNo = item.no;
+    jurnalKasState = jurnalKasState.filter(it => it.id !== itemId);
+    // Renumber nomor transaksi agar tetap urut
+    jurnalKasState.forEach((it, idx) => {
+        it.no = idx + 1;
+    });
+
+    saveJurnalKasState();
+    renderJurnalView();
+    showToast(`Transaksi #${deletedNo} berhasil dihapus.`, 'info');
 }
