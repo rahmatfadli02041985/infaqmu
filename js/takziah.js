@@ -428,20 +428,20 @@ function renderTakziahView() {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                    <form onsubmit="handleAddTakziahMember(event)" class="flex items-center gap-1.5">
-                        <input type="text" id="takziah-new-member-name" required placeholder="Nama anggota baru..." class="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-emerald-600">
+                <div class="space-y-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <form onsubmit="handleAddTakziahMember(event)" class="flex items-center gap-1.5 min-w-0">
+                        <input type="text" id="takziah-new-member-name" required placeholder="Nama anggota baru..." class="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-emerald-600">
                         <button type="submit" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-emerald-800 text-white text-xs font-bold shrink-0">
                             + Anggota
                         </button>
                     </form>
-                    <form onsubmit="handleAddTakziahEvent(event)" class="flex items-center gap-1.5">
-                        <input type="text" id="takziah-new-event-date" required placeholder="Tgl (cth: 25/11/2026)" class="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-amber-600">
+                    <form onsubmit="handleAddTakziahEvent(event)" class="flex items-center gap-1.5 min-w-0">
+                        <input type="text" id="takziah-new-event-date" required placeholder="Tgl (cth: 25/11/2026)" class="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-amber-600">
                         <button type="submit" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold shrink-0">
                             + Musibah #${events.length + 1}
                         </button>
                     </form>
-                    <div class="sm:col-span-2 flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200/80 text-[11px]">
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200/80 text-[11px]">
                         <div class="flex items-center gap-2">
                             <span class="font-semibold text-slate-600">Tarif per Musibah:</span>
                             <input type="text" id="takziah-nominal-input" value="${formatIndoDots(nominal)}" oninput="formatMoneyInputLive(this)" class="w-24 px-2 py-1 rounded border border-slate-300 bg-white font-mono font-bold text-xs text-slate-900">
