@@ -2656,7 +2656,7 @@ function renderJurnalView() {
                             const isKeluar = item.out > 0;
                             const catBadgeCls = getJurnalCategoryBadgeClass(item.category);
                             return `
-                                <tr class="hover:bg-slate-50/90 transition-colors">
+                                <tr class="hover:bg-slate-50/90 transition-colors ${isAdmin ? 'cursor-pointer' : ''}" ${isAdmin ? `onclick="if (!event.target.closest('button')) openEditJurnalModal('${item.id}')"` : ''}>
                                     <td class="py-2.5 px-2.5 text-center text-slate-500 font-semibold border-r border-slate-100 bg-slate-50/40">
                                         ${item.no}
                                     </td>
@@ -2665,10 +2665,22 @@ function renderJurnalView() {
                                     </td>
                                     <td class="py-2.5 px-3 border-r border-slate-100 leading-snug">
                                         <div class="font-semibold text-slate-900">${escapeHtml(item.desc)}</div>
-                                        <div class="mt-1">
+                                        <div class="mt-1.5 flex items-center justify-between gap-1.5 flex-wrap">
                                             <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${catBadgeCls}">
                                                 ${escapeHtml(item.category)}
                                             </span>
+                                            ${isAdmin ? `
+                                                <div class="inline-flex items-center gap-1.5 no-print" onclick="event.stopPropagation()">
+                                                    <button type="button" onclick="openEditJurnalModal('${item.id}')" title="Ubah Transaksi #${item.no}" class="px-2 py-0.5 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-300 transition-colors inline-flex items-center gap-1 shadow-2xs">
+                                                        <svg class="w-3 h-3 text-amber-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                                        <span>Ubah</span>
+                                                    </button>
+                                                    <button type="button" onclick="confirmDeleteJurnalItem('${item.id}')" title="Hapus Transaksi #${item.no}" class="px-2 py-0.5 rounded-md bg-rose-50 hover:bg-rose-100 text-rose-800 text-[10px] font-bold border border-rose-300 transition-colors inline-flex items-center gap-1 shadow-2xs">
+                                                        <svg class="w-3 h-3 text-rose-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                        <span>Hapus</span>
+                                                    </button>
+                                                </div>
+                                            ` : ''}
                                         </div>
                                     </td>
                                     <td class="py-2.5 px-3 text-right border-r border-slate-100 whitespace-nowrap font-bold ${isMasuk ? 'text-emerald-700 bg-emerald-50/30' : 'text-slate-300'}">
@@ -2681,17 +2693,19 @@ function renderJurnalView() {
                                         Rp${formatIndoDots(item.runningBalance)}
                                     </td>
                                     ${isAdmin ? `
-                                        <td class="py-2 px-2 text-center whitespace-nowrap no-print">
+                                        <td class="py-2 px-2 text-center whitespace-nowrap no-print" onclick="event.stopPropagation()">
                                             <div class="flex items-center justify-center gap-1">
-                                                <button type="button" onclick="openEditJurnalModal('${item.id}')" title="Edit Transaksi" class="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-colors">
-                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <button type="button" onclick="openEditJurnalModal('${item.id}')" title="Ubah Transaksi #${item.no}" class="px-2 py-1 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-bold inline-flex items-center gap-1">
+                                                    <svg class="w-3.5 h-3.5 text-amber-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                                     </svg>
+                                                    <span>Ubah</span>
                                                 </button>
-                                                <button type="button" onclick="confirmDeleteJurnalItem('${item.id}')" title="Hapus Transaksi" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors">
-                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <button type="button" onclick="confirmDeleteJurnalItem('${item.id}')" title="Hapus Transaksi #${item.no}" class="px-2 py-1 rounded-md bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 text-[10px] font-bold inline-flex items-center gap-1">
+                                                    <svg class="w-3.5 h-3.5 text-rose-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                                     </svg>
+                                                    <span>Hapus</span>
                                                 </button>
                                             </div>
                                         </td>
