@@ -99,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         loadLocalFallbackData();
         loadTakziahState();
+        if (typeof loadJurnalKasState === 'function') loadJurnalKasState();
         ensureTakziahMenuAndViewMounted();
         deduplicateMonthlyLedgerRecords();
         syncWaReportsStoreFromTransactions();
@@ -367,11 +368,25 @@ function grantAccess(role) {
         navWaBtn.classList.add('flex');
     }
 
+    // Navigasi Jurnal Kas: tampil untuk Admin dan Jamaah
+    const navJurnalBtn = document.getElementById('nav-btn-jurnal');
+    if (navJurnalBtn) {
+        navJurnalBtn.classList.remove('hidden');
+        navJurnalBtn.classList.add('flex');
+    }
+
     // Highlight Story Laporan InfaqMu: tampil untuk Admin dan Jamaah
     const storyWaBtn = document.getElementById('story-highlight-wa');
     if (storyWaBtn) {
         storyWaBtn.classList.remove('hidden');
         storyWaBtn.classList.add('flex');
+    }
+
+    // Highlight Story Jurnal Kas: tampil untuk Admin dan Jamaah
+    const storyJurnalBtn = document.getElementById('story-highlight-jurnal');
+    if (storyJurnalBtn) {
+        storyJurnalBtn.classList.remove('hidden');
+        storyJurnalBtn.classList.add('flex');
     }
 
     // Header & Editor Laporan InfaqMu: Admin vs Jamaah
@@ -469,6 +484,8 @@ function switchMainView(view) {
     if (navStatsEl) navStatsEl.className = view === 'stats' ? activeCls : inactiveCls;
     const navWaEl = document.getElementById('nav-btn-wa');
     if (navWaEl) navWaEl.className = view === 'wa' ? activeCls : inactiveCls;
+    const navJurnalEl = document.getElementById('nav-btn-jurnal');
+    if (navJurnalEl) navJurnalEl.className = view === 'jurnal' ? activeCls : inactiveCls;
     const navTakziahEl = document.getElementById('nav-btn-takziah');
     if (navTakziahEl) navTakziahEl.className = view === 'takziah' ? activeCls : inactiveCls;
 
@@ -525,7 +542,15 @@ function refreshDashboard() {
     document.getElementById('stats-view').classList.add('hidden');
     const takziahViewEl = document.getElementById('takziah-view');
     if (takziahViewEl) takziahViewEl.classList.add('hidden');
+    const jurnalViewEl = document.getElementById('jurnal-view');
+    if (jurnalViewEl) jurnalViewEl.classList.add('hidden');
     document.getElementById('empty-state').classList.add('hidden');
+
+    if (currentMainView === 'jurnal') {
+        if (jurnalViewEl) jurnalViewEl.classList.remove('hidden');
+        if (typeof renderJurnalView === 'function') renderJurnalView();
+        return;
+    }
 
     if (currentMainView === 'takziah') {
         if (takziahViewEl) takziahViewEl.classList.remove('hidden');

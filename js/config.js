@@ -11,7 +11,8 @@ const STORAGE_KEYS = {
     TRANSACTIONS: 'infaqmu_local_transactions_v7',
     LIKED_IDS: 'infaqmu_local_liked_v5',
     WA_REPORTS: 'infaqmu_wa_reports_v7',
-    TAKZIAH: 'infaqmu_takziah_data_v1'
+    TAKZIAH: 'infaqmu_takziah_data_v1',
+    JURNAL_KAS: 'infaqmu_jurnal_kas_v1'
 };
 
 const CATEGORIES = {
