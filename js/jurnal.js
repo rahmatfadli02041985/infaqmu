@@ -2719,34 +2719,34 @@ function renderJurnalView() {
                     </tbody>
                     <tfoot>
                         <tr class="bg-slate-950 text-white font-extrabold text-xs">
-                            <td colspan="3" class="py-3 px-3 text-right border-r border-slate-800">
+                            <td colspan="3" class="py-3 px-3 text-right border-r border-slate-800 bg-slate-950 text-white">
                                 SUBTOTAL HASIL FILTER:
                             </td>
-                            <td class="py-3 px-3 text-right border-r border-slate-800 text-emerald-400 whitespace-nowrap">
+                            <td class="py-3 px-3 text-right border-r border-slate-800 text-emerald-400 whitespace-nowrap bg-slate-950">
                                 + Rp${formatIndoDots(filteredIn)}
                             </td>
-                            <td class="py-3 px-3 text-right border-r border-slate-800 text-rose-400 whitespace-nowrap">
+                            <td class="py-3 px-3 text-right border-r border-slate-800 text-rose-400 whitespace-nowrap bg-slate-950">
                                 - Rp${formatIndoDots(filteredOut)}
                             </td>
-                            <td class="py-3 px-3 text-right ${isAdmin ? 'border-r border-slate-800' : ''} text-teal-300 whitespace-nowrap">
+                            <td class="py-3 px-3 text-right ${isAdmin ? 'border-r border-slate-800' : ''} text-teal-300 whitespace-nowrap bg-slate-950">
                                 Rp${formatIndoDots(filteredNet)}
                             </td>
-                            ${isAdmin ? `<td class="no-print border-l border-slate-800"></td>` : ''}
+                            ${isAdmin ? `<td class="no-print border-l border-slate-800 bg-slate-950"></td>` : ''}
                         </tr>
                         <tr class="bg-slate-900 text-slate-200 font-extrabold text-[11px] border-t border-slate-800">
-                            <td colspan="3" class="py-2.5 px-3 text-right border-r border-slate-800">
+                            <td colspan="3" class="py-2.5 px-3 text-right border-r border-slate-800 bg-slate-900 text-slate-200">
                                 TOTAL KAS AKHIR KESELURUHAN (ALL TIME):
                             </td>
-                            <td class="py-2.5 px-3 text-right border-r border-slate-800 text-emerald-300 whitespace-nowrap">
+                            <td class="py-2.5 px-3 text-right border-r border-slate-800 text-emerald-300 whitespace-nowrap bg-slate-900">
                                 Rp${formatIndoDots(grandTotalIn)}
                             </td>
-                            <td class="py-2.5 px-3 text-right border-r border-slate-800 text-rose-300 whitespace-nowrap">
+                            <td class="py-2.5 px-3 text-right border-r border-slate-800 text-rose-300 whitespace-nowrap bg-slate-900">
                                 Rp${formatIndoDots(grandTotalOut)}
                             </td>
-                            <td class="py-2.5 px-3 text-right ${isAdmin ? 'border-r border-slate-800' : ''} text-emerald-300 whitespace-nowrap font-bold text-xs">
+                            <td class="py-2.5 px-3 text-right ${isAdmin ? 'border-r border-slate-800' : ''} text-emerald-300 whitespace-nowrap font-bold text-xs bg-slate-900">
                                 Rp${formatIndoDots(grandTotalBalance)}
                             </td>
-                            ${isAdmin ? `<td class="no-print border-l border-slate-800"></td>` : ''}
+                            ${isAdmin ? `<td class="no-print border-l border-slate-800 bg-slate-900"></td>` : ''}
                         </tr>
                     </tfoot>
                 </table>

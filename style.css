@@ -109,8 +109,8 @@ body {
 
 .takziah-table th:nth-child(2),
 .takziah-table td:nth-child(2),
-table th:nth-child(2),
-table td:nth-child(2) {
+#takziah-main-table th:nth-child(2),
+#takziah-main-table td:nth-child(2) {
   position: sticky;
   left: 0;
   z-index: 2;
@@ -119,7 +119,7 @@ table td:nth-child(2) {
 }
 
 .takziah-table thead th:nth-child(2),
-table thead th:nth-child(2) {
+#takziah-main-table thead th:nth-child(2) {
   z-index: 3;
   background-color: #f5dec2;
 }
