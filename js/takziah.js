@@ -384,7 +384,7 @@ function renderTakziahView() {
                 </div>
                 <div class="flex flex-wrap items-center gap-1.5">
                     <button type="button" onclick="copyTakziahWaSummary()" class="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm">
-                        Salin Rekapan (Format Whatsapp)
+                        Salin Rekapan
                     </button>
                     <button type="button" onclick="exportTakziahCSV()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold">
                         Unduh CSV
@@ -732,7 +732,7 @@ function copyTakziahWaSummary() {
     lines.push(`*Total Terkumpul:* ${formatRupiahCompactNoSpace(totalBayarAll)}`);
     lines.push(`*Total Tunggakan:* ${formatRupiahCompactNoSpace(totalTunggakanAll)}`);
 
-    copyTextFallback(lines.join('\n'), 'Rekapan (Format Whatsapp) Iuran Takziah berhasil disalin!');
+    copyTextFallback(lines.join('\n'), 'Rekapan Iuran Takziah berhasil disalin!');
 }
 
 function exportTakziahCSV() {

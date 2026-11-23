@@ -384,7 +384,7 @@ function grantAccess(role) {
 
     const btnSecondary = document.getElementById('btn-profile-secondary');
     if (isAdmin) {
-        btnSecondary.textContent = 'Rekap Laporan WA';
+        btnSecondary.textContent = 'Rekap Laporan InfaqMU';
         btnSecondary.onclick = () => switchMainView('wa');
     } else {
         btnSecondary.textContent = 'Laporan InfaqMu';
