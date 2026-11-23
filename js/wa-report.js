@@ -576,7 +576,7 @@ async function saveAndPublishWaReport() {
 }
 
 function copyWaReportText() {
-    copyTextFallback(document.getElementById('wa-generated-text').textContent, 'Teks laporan WhatsApp berhasil disalin!');
+    copyTextFallback(document.getElementById('wa-generated-text').textContent, 'Teks laporan berhasil disalin!');
 }
 
 function shareDirectToWhatsApp() {
