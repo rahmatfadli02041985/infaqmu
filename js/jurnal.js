@@ -2302,14 +2302,22 @@ const INITIAL_JURNAL_KAS = [
 ];
 
 let jurnalKasState = [...INITIAL_JURNAL_KAS];
-let jurnalFilter = {
-    search: '',
-    year: 'all',
-    month: 'all',
-    type: 'all',
-    category: 'all',
-    sort: 'asc' // 'asc' (No 1..191) atau 'desc' (Terbaru ke terlama)
-};
+
+function getJurnalDefaultFilter() {
+    const now = new Date();
+    const curYear = String(now.getFullYear());
+    const curMonth = String(now.getMonth() + 1).padStart(2, '0');
+    return {
+        search: '',
+        year: curYear,
+        month: curMonth,
+        type: 'all',
+        category: 'all',
+        sort: 'asc' // 'asc' (No 1..N) atau 'desc' (Terbaru ke terlama)
+    };
+}
+
+let jurnalFilter = getJurnalDefaultFilter();
 
 
 function loadJurnalKasState() {
@@ -2370,6 +2378,8 @@ function getJurnalUniqueCategories() {
 
 function getJurnalUniqueYears() {
     const years = new Set();
+    const curYear = String(new Date().getFullYear());
+    years.add(curYear);
     jurnalKasState.forEach(item => {
         if (item.isoDate && item.isoDate.length >= 4) {
             years.add(item.isoDate.substring(0, 4));
@@ -2384,14 +2394,7 @@ function setJurnalFilter(key, value) {
 }
 
 function resetJurnalFilters() {
-    jurnalFilter = {
-        search: '',
-        year: 'all',
-        month: 'all',
-        type: 'all',
-        category: 'all',
-        sort: 'asc'
-    };
+    jurnalFilter = getJurnalDefaultFilter();
     renderJurnalView();
 }
 
