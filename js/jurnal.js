@@ -2635,11 +2635,11 @@ function renderJurnalView() {
         <!-- TABEL JURNAL KAS AKUNTANSI -->
         <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
             <div class="overflow-x-auto no-scrollbar">
-                <table class="w-full text-left border-collapse text-xs">
+                <table id="jurnal-main-table" class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="bg-slate-900 text-white text-[11px] font-bold tracking-wide">
                             <th class="py-2.5 px-2.5 text-center border-r border-slate-800 w-10">No</th>
-                            <th class="py-2.5 px-2.5 border-r border-slate-800 w-24">Tanggal</th>
+                            <th class="py-2.5 px-2.5 border-r border-slate-800 w-24 bg-slate-900 text-white font-bold" style="position: static !important; box-shadow: none !important;">Tanggal</th>
                             <th class="py-2.5 px-3 border-r border-slate-800 min-w-[200px]">Keterangan & Kategori</th>
                             <th class="py-2.5 px-3 text-right border-r border-slate-800 text-emerald-300 w-28">Kas Masuk</th>
                             <th class="py-2.5 px-3 text-right border-r border-slate-800 text-rose-300 w-28">Kas Keluar</th>
@@ -2663,7 +2663,7 @@ function renderJurnalView() {
                                     <td class="py-2.5 px-2.5 text-center text-slate-500 font-semibold border-r border-slate-100 bg-slate-50/40">
                                         ${item.no}
                                     </td>
-                                    <td class="py-2.5 px-2.5 text-slate-800 font-semibold border-r border-slate-100 whitespace-nowrap">
+                                    <td class="py-2.5 px-2.5 text-slate-800 font-semibold border-r border-slate-100 whitespace-nowrap" style="position: static !important; box-shadow: none !important;">
                                         ${item.date}
                                     </td>
                                     <td class="py-2.5 px-3 border-r border-slate-100 leading-snug">

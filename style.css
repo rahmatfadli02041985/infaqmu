@@ -123,3 +123,10 @@ body {
   z-index: 3;
   background-color: #f5dec2;
 }
+
+/* Memastikan kolom tabel jurnal kas tidak terkunci/sticky saat digeser horizontal */
+#jurnal-main-table th,
+#jurnal-main-table td {
+  position: static !important;
+  box-shadow: none !important;
+}
