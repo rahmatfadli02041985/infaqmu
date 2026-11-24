@@ -12,7 +12,9 @@ let appSettings = {
     orgHandle: 'prm.bandarmalela',
     orgBio: 'Laporan Transparansi Penerimaan & Penyaluran Infaq Sedekah • Terverifikasi Bendahara',
     viewerPin: '112233',
-    adminPin: '999999'
+    adminPin: '999999',
+    showFeedForViewer: false,
+    showQuickLogin: true
 };
 
 let transactions = [];
@@ -229,6 +231,28 @@ function applySettingsToUI() {
     document.getElementById('header-org-bio').textContent = appSettings.orgBio;
     document.getElementById('hint-viewer-pin').textContent = appSettings.viewerPin;
     document.getElementById('hint-admin-pin').textContent = appSettings.adminPin;
+
+    // Tampilkan / sembunyikan Akses Cepat pada form login
+    const quickLoginEl = document.getElementById('quick-login-container');
+    if (quickLoginEl) {
+        const isQuickLoginVisible = appSettings.showQuickLogin !== false;
+        quickLoginEl.classList.toggle('hidden', !isQuickLoginVisible);
+    }
+
+    // Tampilkan / sembunyikan menu Beranda untuk Jamaah/Viewer jika sedang login
+    if (currentRole) {
+        const isAdmin = currentRole === 'admin';
+        const canSeeFeed = isAdmin || appSettings.showFeedForViewer === true;
+        const sidebarFeedBtn = document.getElementById('sidebar-nav-btn-feed');
+        if (sidebarFeedBtn) {
+            sidebarFeedBtn.classList.toggle('hidden', !canSeeFeed);
+        }
+        const navFeedBtn = document.getElementById('nav-btn-feed');
+        if (navFeedBtn) {
+            navFeedBtn.classList.toggle('hidden', !canSeeFeed);
+            navFeedBtn.classList.toggle('flex', canSeeFeed);
+        }
+    }
 }
 
 function switchGateRole(role) {
@@ -353,9 +377,10 @@ function grantAccess(role) {
     if (sidebarRoleBadge) {
         sidebarRoleBadge.textContent = isAdmin ? 'Admin' : 'Jamaah';
     }
+    const canSeeFeed = isAdmin || appSettings.showFeedForViewer === true;
     const sidebarFeedBtn = document.getElementById('sidebar-nav-btn-feed');
     if (sidebarFeedBtn) {
-        sidebarFeedBtn.classList.toggle('hidden', !isAdmin);
+        sidebarFeedBtn.classList.toggle('hidden', !canSeeFeed);
     }
     const sidebarCreateBtn = document.getElementById('sidebar-btn-create-post');
     if (sidebarCreateBtn) {
@@ -368,11 +393,11 @@ function grantAccess(role) {
         sidebarSecBtn.classList.toggle('flex', isAdmin);
     }
 
-    // Navigasi Beranda: disembunyikan sementara untuk Jamaah, tampil untuk Admin
+    // Navigasi Beranda: tampil jika Admin atau jika diizinkan di Pengaturan
     const navFeedBtn = document.getElementById('nav-btn-feed');
     if (navFeedBtn) {
-        navFeedBtn.classList.toggle('hidden', !isAdmin);
-        navFeedBtn.classList.toggle('flex', isAdmin);
+        navFeedBtn.classList.toggle('hidden', !canSeeFeed);
+        navFeedBtn.classList.toggle('flex', canSeeFeed);
     }
 
     // Navigasi Laporan InfaqMu: tampil untuk Admin dan Jamaah
@@ -451,6 +476,7 @@ function lockApplication() {
     clearPinInputs();
     document.getElementById('main-app').classList.add('hidden');
     document.getElementById('access-gate').classList.remove('hidden');
+    applySettingsToUI();
 }
 
 // --- NAVIGASI & BERANDA ALA INSTAGRAM ---
@@ -477,8 +503,11 @@ function clearSearch() {
 
 function switchMainView(view) {
     if (view === 'feed' && currentRole !== 'admin') {
-        showToast('Menu Beranda sedang disembunyikan sementara untuk Jamaah.', 'info');
-        return;
+        const canSeeFeed = appSettings.showFeedForViewer === true;
+        if (!canSeeFeed) {
+            showToast('Menu Beranda sedang disembunyikan untuk Jamaah.', 'info');
+            return;
+        }
     }
     currentMainView = view;
 
@@ -488,7 +517,8 @@ function switchMainView(view) {
     ensureTakziahMenuAndViewMounted();
     const navFeedEl = document.getElementById('nav-btn-feed');
     if (navFeedEl) {
-        if (currentRole !== 'admin') {
+        const canSeeFeed = currentRole === 'admin' || appSettings.showFeedForViewer === true;
+        if (!canSeeFeed) {
             navFeedEl.className = 'hidden';
         } else {
             navFeedEl.className = view === 'feed' ? activeCls : inactiveCls;
@@ -1345,6 +1375,11 @@ function openSecurityModal() {
     document.getElementById('set-viewer-pin').value = appSettings.viewerPin;
     document.getElementById('set-admin-pin').value = appSettings.adminPin;
 
+    const showFeedCheck = document.getElementById('set-show-feed-viewer');
+    if (showFeedCheck) showFeedCheck.checked = appSettings.showFeedForViewer === true;
+    const showQuickCheck = document.getElementById('set-show-quick-login');
+    if (showQuickCheck) showQuickCheck.checked = appSettings.showQuickLogin !== false;
+
     document.getElementById('security-modal').classList.remove('hidden');
     document.getElementById('security-modal').classList.add('flex');
 }
@@ -1375,7 +1410,9 @@ async function handleSaveSecuritySettings(e) {
         orgHandle: document.getElementById('set-org-handle').value.trim().replace(/^@/, ''),
         orgBio: document.getElementById('set-org-bio').value.trim(),
         viewerPin: newViewerPin,
-        adminPin: newAdminPin
+        adminPin: newAdminPin,
+        showFeedForViewer: document.getElementById('set-show-feed-viewer') ? document.getElementById('set-show-feed-viewer').checked : false,
+        showQuickLogin: document.getElementById('set-show-quick-login') ? document.getElementById('set-show-quick-login').checked : true
     };
 
     saveLocalCache();

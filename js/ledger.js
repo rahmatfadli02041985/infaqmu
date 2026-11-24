@@ -92,6 +92,7 @@ async function syncInitialData(showNotification = false) {
         if (Array.isArray(settingsRows) && settingsRows.length > 0) {
             const s = settingsRows[0];
             appSettings = {
+                ...appSettings,
                 orgName: s.org_name || appSettings.orgName,
                 orgHandle: (s.org_handle || appSettings.orgHandle).replace(/^@/, ''),
                 orgBio: s.org_bio || appSettings.orgBio,
