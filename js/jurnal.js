@@ -2472,7 +2472,7 @@ function renderJurnalView() {
                             Buku Kas Umum
                         </span>
                         <h2 class="font-display font-extrabold text-base sm:text-lg mt-0.5 text-white">
-                            Jurnal Kas Masuk & Kas Keluar
+                            Jurnal Kas Ranting Masuk & Keluar
                         </h2>
                     </div>
                     <div class="text-right shrink-0">
@@ -2481,7 +2481,7 @@ function renderJurnalView() {
                     </div>
                 </div>
                 <p class="text-xs text-slate-300 mt-1 leading-relaxed">
-                    Laporan catatan keuangan resmi arus kas masuk (penerimaan), kas keluar (pengeluaran), serta saldo kas kumulatif InfaqMu.
+                    Laporan catatan keuangan resmi arus kas masuk (penerimaan), kas keluar (pengeluaran), serta saldo kas kumulatif InfaqMU.
                 </p>
             </div>
         </div>

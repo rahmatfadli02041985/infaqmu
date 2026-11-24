@@ -99,29 +99,51 @@ body {
         display: none !important;
     }
 }
-/* Mengunci kolom ke-2 (Nama Anggota) di sisi kiri saat tabel digeser horizontal */
+/* Mengunci header tabel di atas dan kolom ke-2 (Nama Anggota) di sisi kiri saat tabel Takziah digulir */
 .takziah-table-wrapper,
 .table-responsive,
-.table-wrap {
+.table-wrap,
+#takziah-bottom-table-scroll {
   overflow-x: auto;
   max-width: 100%;
 }
 
-.takziah-table th:nth-child(2),
+/* Header Tabel Terkunci di Atas (Sticky Top) */
+#takziah-main-table thead,
+.takziah-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+#takziah-main-table thead th,
+.takziah-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: #FDE9C9;
+  box-shadow: inset 0 -1px 0 #1e293b, inset 0 1px 0 #1e293b;
+}
+
+/* Kolom ke-2 (Nama Anggota) pada Baris Data Terkunci di Sisi Kiri */
 .takziah-table td:nth-child(2),
-#takziah-main-table th:nth-child(2),
 #takziah-main-table td:nth-child(2) {
   position: sticky;
   left: 0;
-  z-index: 2;
+  z-index: 10;
   background-color: #ffffff;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.06);
 }
 
+/* Kolom ke-2 (Nama Anggota) pada Header Terkunci di Pojok Kiri Atas (Top & Left) */
 .takziah-table thead th:nth-child(2),
 #takziah-main-table thead th:nth-child(2) {
-  z-index: 3;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 30;
   background-color: #f5dec2;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.08), inset 0 -1px 0 #1e293b, inset 0 1px 0 #1e293b;
 }
 
 /* Memastikan kolom tabel jurnal kas tidak terkunci/sticky saat digeser horizontal */

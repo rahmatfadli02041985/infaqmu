@@ -285,7 +285,7 @@ function renderTakziahView() {
     }).join('');
 
     const headerEventCols = events.map((ev) => `
-        <th class="border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 min-w-[115px]">
+        <th class="sticky top-0 z-20 border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 min-w-[115px]">
             <div class="leading-tight">${escapeHtml(ev.label)}</div>
             <div class="text-[11px] font-bold text-slate-800">(${escapeHtml(ev.date)})</div>
             ${isAdmin ? `
@@ -461,16 +461,16 @@ function renderTakziahView() {
                     <button type="button" onclick="scrollTakziahHorizontalBy(240)" class="w-6 h-6 flex items-center justify-center rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-600 font-bold text-[10px] shrink-0" title="Geser Kanan">▶</button>
                 </div>
 
-                <div id="takziah-bottom-table-scroll" class="overflow-x-auto rounded-lg border border-slate-800">
+                <div id="takziah-bottom-table-scroll" class="overflow-x-auto overflow-y-auto max-h-[calc(100vh-210px)] sm:max-h-[calc(100vh-240px)] rounded-lg border border-slate-800 shadow-2xs">
                     <table id="takziah-main-table" class="w-full border-collapse text-xs sm:text-[13px] font-sans">
-                        <thead>
+                        <thead class="sticky top-0 z-20 bg-[#FDE9C9]">
                             <tr>
-                                <th class="border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 w-10">No</th>
-                                <th class="border border-slate-800 bg-[#FDE9C9] px-3 py-2 text-center font-bold text-slate-900 min-w-[145px]">Nama Anggota</th>
+                                <th class="sticky top-0 z-20 border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 w-10">No</th>
+                                <th class="sticky top-0 left-0 z-30 border border-slate-800 bg-[#f5dec2] px-3 py-2 text-center font-bold text-slate-900 min-w-[145px]">Nama Anggota</th>
                                 ${headerEventCols}
-                                <th class="border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 min-w-[95px]">Total Bayar</th>
-                                <th class="border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 min-w-[95px]">Tunggakan</th>
-                                <th class="border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 min-w-[95px]">Keterangan</th>
+                                <th class="sticky top-0 z-20 border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 min-w-[95px]">Total Bayar</th>
+                                <th class="sticky top-0 z-20 border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 min-w-[95px]">Tunggakan</th>
+                                <th class="sticky top-0 z-20 border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 min-w-[95px]">Keterangan</th>
                             </tr>
                         </thead>
                         <tbody>
