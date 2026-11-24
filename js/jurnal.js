@@ -2653,19 +2653,20 @@ function renderJurnalView() {
                                     Tidak ada data transaksi yang cocok dengan filter.
                                 </td>
                             </tr>
-                        ` : filtered.map((item) => {
+                        ` : filtered.map((item, idx) => {
                             const isMasuk = item.in > 0;
                             const isKeluar = item.out > 0;
                             const catBadgeCls = getJurnalCategoryBadgeClass(item.category);
+                            const rowBg = idx % 2 === 1 ? 'bg-slate-100/75' : 'bg-white';
                             return `
-                                <tr class="hover:bg-slate-50/90 transition-colors ${isAdmin ? 'cursor-pointer' : ''}" ${isAdmin ? `onclick="if (!event.target.closest('button')) openEditJurnalModal('${item.id}')"` : ''}>
-                                    <td class="py-2.5 px-2.5 text-center text-slate-500 font-semibold border-r border-slate-100 bg-slate-50/40">
+                                <tr class="${rowBg} hover:bg-emerald-50/80 transition-colors ${isAdmin ? 'cursor-pointer' : ''}" ${isAdmin ? `onclick="if (!event.target.closest('button')) openEditJurnalModal('${item.id}')"` : ''}>
+                                    <td class="py-2.5 px-2.5 text-center text-slate-500 font-bold border-r border-slate-200/80">
                                         ${item.no}
                                     </td>
-                                    <td class="py-2.5 px-2.5 text-slate-800 font-semibold border-r border-slate-100 whitespace-nowrap" style="position: static !important; box-shadow: none !important;">
+                                    <td class="py-2.5 px-2.5 text-slate-800 font-semibold border-r border-slate-200/80 whitespace-nowrap" style="position: static !important; box-shadow: none !important;">
                                         ${item.date}
                                     </td>
-                                    <td class="py-2.5 px-3 border-r border-slate-100 leading-snug">
+                                    <td class="py-2.5 px-3 border-r border-slate-200/80 leading-snug">
                                         <div class="font-semibold text-slate-900">${escapeHtml(item.desc)}</div>
                                         <div class="mt-1.5 flex items-center justify-between gap-1.5 flex-wrap">
                                             <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${catBadgeCls}">
@@ -2685,13 +2686,13 @@ function renderJurnalView() {
                                             ` : ''}
                                         </div>
                                     </td>
-                                    <td class="py-2.5 px-3 text-right border-r border-slate-100 whitespace-nowrap font-bold ${isMasuk ? 'text-emerald-700 bg-emerald-50/30' : 'text-slate-300'}">
+                                    <td class="py-2.5 px-3 text-right border-r border-slate-200/80 whitespace-nowrap font-bold ${isMasuk ? 'text-emerald-700 font-extrabold' : 'text-slate-300'}">
                                         ${isMasuk ? '+ Rp' + formatIndoDots(item.in) : '-'}
                                     </td>
-                                    <td class="py-2.5 px-3 text-right border-r border-slate-100 whitespace-nowrap font-bold ${isKeluar ? 'text-rose-700 bg-rose-50/30' : 'text-slate-300'}">
+                                    <td class="py-2.5 px-3 text-right border-r border-slate-200/80 whitespace-nowrap font-bold ${isKeluar ? 'text-rose-700 font-extrabold' : 'text-slate-300'}">
                                         ${isKeluar ? '- Rp' + formatIndoDots(item.out) : '-'}
                                     </td>
-                                    <td class="py-2.5 px-3 text-right whitespace-nowrap font-extrabold text-slate-900 bg-slate-50/20">
+                                    <td class="py-2.5 px-3 text-right whitespace-nowrap font-extrabold text-slate-900">
                                         Rp${formatIndoDots(item.runningBalance)}
                                     </td>
                                 </tr>

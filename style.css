@@ -153,6 +153,19 @@ body {
   box-shadow: none !important;
 }
 
+/* Format 2 Warna Baris (Zebra Striping) Tabel Jurnal Kas */
+#jurnal-main-table tbody tr:nth-child(odd) {
+  background-color: #ffffff;
+}
+
+#jurnal-main-table tbody tr:nth-child(even) {
+  background-color: #f1f5f9;
+}
+
+#jurnal-main-table tbody tr:hover {
+  background-color: #ecfdf5 !important;
+}
+
 /* =====================================================================
    TAMPILAN DESKTOP ALA TIKTOK (MULTI-OS: WINDOWS, MAC, DLL)
    ===================================================================== */
