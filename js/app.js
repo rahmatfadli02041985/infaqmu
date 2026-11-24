@@ -238,18 +238,12 @@ function switchGateRole(role) {
     const promptLabel = document.getElementById('pin-prompt-label');
     const btnUnlock = document.getElementById('btn-unlock');
 
-    if (role === 'viewer') {
-        tabViewer.className = 'flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all bg-white text-emerald-800 shadow-sm';
-        tabAdmin.className = 'flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-500 hover:text-slate-900';
-        promptLabel.textContent = 'Masukkan Kode PIN 6 Digit dari Admin';
-        btnUnlock.className = 'w-full py-3.5 px-5 rounded-2xl bg-slate-900 hover:bg-emerald-800 text-white font-bold text-sm shadow-lg transition-all';
-        btnUnlock.innerHTML = '<span>Buka Berita & Transparansi</span>';
-    } else {
-        tabAdmin.className = 'flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all bg-white text-amber-800 shadow-sm';
-        tabViewer.className = 'flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-500 hover:text-slate-900';
-        promptLabel.textContent = 'Masukkan PIN 6 Digit Khusus Panitia / Admin';
-        btnUnlock.className = 'w-full py-3.5 px-5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-sm shadow-lg transition-all';
-        btnUnlock.innerHTML = '<span>Masuk sebagai Admin</span>';
+    if (tabViewer) tabViewer.classList.toggle('bg-white', role === 'viewer');
+    if (tabAdmin) tabAdmin.classList.toggle('bg-white', role === 'admin');
+    if (promptLabel) promptLabel.textContent = 'Masukkan PIN 6 Digit untuk Log in';
+    if (btnUnlock) {
+        btnUnlock.className = 'w-full py-3.5 px-5 rounded-2xl bg-slate-900 hover:bg-emerald-800 text-white font-bold text-sm shadow-lg transition-all active:scale-[0.98]';
+        btnUnlock.innerHTML = '<span>Log in ke Aplikasi</span>';
     }
     clearPinInputs();
 }
