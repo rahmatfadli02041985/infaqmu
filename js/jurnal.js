@@ -2484,6 +2484,24 @@ function renderJurnalView() {
                     Laporan catatan keuangan resmi arus kas masuk (penerimaan), kas keluar (pengeluaran), serta saldo kas kumulatif InfaqMU.
                 </p>
             </div>
+
+            <!-- TABEL HEADER TERKUNCI (STICKY TEPAT DI BAWAH JUDUL) -->
+            <div id="jurnal-sticky-table-header-wrap" class="hidden mt-1.5 rounded-xl overflow-hidden shadow-md border border-slate-800 bg-slate-900 transition-opacity">
+                <div id="jurnal-sticky-table-header-scroll" class="overflow-x-hidden no-scrollbar">
+                    <table id="jurnal-sticky-clone-table" class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-900 text-white text-[11px] font-bold tracking-wide">
+                                <th class="py-2.5 px-2.5 text-center border-r border-slate-800 w-10">No</th>
+                                <th class="py-2.5 px-2.5 border-r border-slate-800 w-24 bg-slate-900 text-white font-bold">Tanggal</th>
+                                <th class="py-2.5 px-3 border-r border-slate-800 min-w-[200px]">Keterangan & Kategori</th>
+                                <th class="py-2.5 px-3 text-right border-r border-slate-800 text-emerald-300 w-28">Kas Masuk</th>
+                                <th class="py-2.5 px-3 text-right border-r border-slate-800 text-rose-300 w-28">Kas Keluar</th>
+                                <th class="py-2.5 px-3 text-right text-teal-300 w-32">Saldo Kas</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <!-- 3 KPI RINGKASAN KAS -->
@@ -2634,7 +2652,7 @@ function renderJurnalView() {
 
         <!-- TABEL JURNAL KAS AKUNTANSI -->
         <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-            <div class="overflow-x-auto no-scrollbar">
+            <div id="jurnal-table-scroll-container" class="overflow-x-auto no-scrollbar">
                 <table id="jurnal-main-table" class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="bg-slate-900 text-white text-[11px] font-bold tracking-wide">
@@ -2743,7 +2761,52 @@ function renderJurnalView() {
         ` : ''}
     `;
 
-    setTimeout(setupStickyJurnalHeader, 20);
+    setTimeout(setupStickyJurnalHeader, 30);
+}
+
+function syncJurnalHeaderWidths() {
+    const mainThs = document.querySelectorAll('#jurnal-main-table thead th');
+    const cloneThs = document.querySelectorAll('#jurnal-sticky-clone-table thead th');
+    const mainTable = document.getElementById('jurnal-main-table');
+    const cloneTable = document.getElementById('jurnal-sticky-clone-table');
+    if (!mainTable || !cloneTable || mainThs.length === 0 || cloneThs.length === 0) return;
+
+    cloneTable.style.width = `${mainTable.offsetWidth}px`;
+    mainThs.forEach((th, idx) => {
+        if (cloneThs[idx]) {
+            const w = th.getBoundingClientRect().width;
+            cloneThs[idx].style.width = `${w}px`;
+            cloneThs[idx].style.minWidth = `${w}px`;
+            cloneThs[idx].style.maxWidth = `${w}px`;
+        }
+    });
+}
+
+function handleJurnalScroll() {
+    const wrapper = document.getElementById('jurnal-header-card-wrapper');
+    const stickyHeader = document.getElementById('jurnal-sticky-table-header-wrap');
+    const mainTable = document.getElementById('jurnal-main-table');
+    if (!wrapper || !stickyHeader || !mainTable) return;
+
+    const banner = document.getElementById('jurnal-header-banner');
+    const bannerBottom = banner ? banner.getBoundingClientRect().bottom : wrapper.getBoundingClientRect().bottom;
+    const tableRect = mainTable.getBoundingClientRect();
+
+    // Munculkan sticky table header tepat di bawah banner judul saat tabel terscroll mencapai bawah judul
+    const isTableUnderBanner = tableRect.top <= (bannerBottom + 4);
+    const isTableStillVisible = tableRect.bottom > (bannerBottom + 40);
+
+    if (isTableUnderBanner && isTableStillVisible) {
+        stickyHeader.classList.remove('hidden');
+        syncJurnalHeaderWidths();
+        const mainScroll = document.getElementById('jurnal-table-scroll-container');
+        const cloneScroll = document.getElementById('jurnal-sticky-table-header-scroll');
+        if (mainScroll && cloneScroll) {
+            cloneScroll.scrollLeft = mainScroll.scrollLeft;
+        }
+    } else {
+        stickyHeader.classList.add('hidden');
+    }
 }
 
 function setupStickyJurnalHeader() {
@@ -2752,10 +2815,26 @@ function setupStickyJurnalHeader() {
     const mainHeader = document.querySelector('#main-app header');
     const headerHeight = mainHeader ? mainHeader.offsetHeight : 56;
     wrapper.style.top = `${headerHeight}px`;
+
+    const mainScroll = document.getElementById('jurnal-table-scroll-container');
+    const cloneScroll = document.getElementById('jurnal-sticky-table-header-scroll');
+    if (mainScroll && cloneScroll) {
+        mainScroll.onscroll = () => {
+            cloneScroll.scrollLeft = mainScroll.scrollLeft;
+        };
+    }
+
+    syncJurnalHeaderWidths();
+    handleJurnalScroll();
 }
 
 if (typeof window !== 'undefined') {
-    window.addEventListener('resize', setupStickyJurnalHeader);
+    window.addEventListener('resize', () => {
+        setupStickyJurnalHeader();
+        syncJurnalHeaderWidths();
+        handleJurnalScroll();
+    });
+    window.addEventListener('scroll', handleJurnalScroll, { passive: true });
 }
 
 function getJurnalCategoryBadgeClass(category) {

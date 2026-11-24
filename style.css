@@ -147,10 +147,15 @@ body {
 }
 
 /* Memastikan kolom tabel jurnal kas tidak terkunci/sticky saat digeser horizontal */
-#jurnal-main-table th,
-#jurnal-main-table td {
-  position: static !important;
+#jurnal-main-table th:nth-child(2),
+#jurnal-main-table td:nth-child(2),
+#jurnal-sticky-clone-table th:nth-child(2) {
+  left: auto !important;
   box-shadow: none !important;
+}
+
+#jurnal-sticky-table-header-wrap {
+  backdrop-filter: blur(8px);
 }
 
 /* Format 2 Warna Baris (Zebra Striping) Tabel Jurnal Kas */
