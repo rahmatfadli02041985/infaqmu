@@ -354,6 +354,26 @@ function grantAccess(role) {
     document.getElementById('fab-create-post').classList.toggle('hidden', !isAdmin);
     document.getElementById('fab-create-post').classList.toggle('flex', isAdmin);
 
+    // Sync Desktop Sidebar Nav & Role (ala TikTok)
+    const sidebarRoleBadge = document.getElementById('sidebar-role-badge');
+    if (sidebarRoleBadge) {
+        sidebarRoleBadge.textContent = isAdmin ? 'Admin' : 'Jamaah';
+    }
+    const sidebarFeedBtn = document.getElementById('sidebar-nav-btn-feed');
+    if (sidebarFeedBtn) {
+        sidebarFeedBtn.classList.toggle('hidden', !isAdmin);
+    }
+    const sidebarCreateBtn = document.getElementById('sidebar-btn-create-post');
+    if (sidebarCreateBtn) {
+        sidebarCreateBtn.classList.toggle('hidden', !isAdmin);
+        sidebarCreateBtn.classList.toggle('flex', isAdmin);
+    }
+    const sidebarSecBtn = document.getElementById('sidebar-btn-security');
+    if (sidebarSecBtn) {
+        sidebarSecBtn.classList.toggle('hidden', !isAdmin);
+        sidebarSecBtn.classList.toggle('flex', isAdmin);
+    }
+
     // Navigasi Beranda: disembunyikan sementara untuk Jamaah, tampil untuk Admin
     const navFeedBtn = document.getElementById('nav-btn-feed');
     if (navFeedBtn) {
@@ -505,7 +525,58 @@ function switchMainView(view) {
         }
     }
 
+    updateSidebarNavActive(view);
     refreshDashboard();
+}
+
+function updateSidebarNavActive(view) {
+    const items = [
+        { id: 'sidebar-nav-btn-feed', view: 'feed' },
+        { id: 'sidebar-nav-btn-wa', view: 'wa' },
+        { id: 'sidebar-nav-btn-jurnal', view: 'jurnal' },
+        { id: 'sidebar-nav-btn-takziah', view: 'takziah' },
+        { id: 'sidebar-nav-btn-stats', view: 'stats' }
+    ];
+
+    items.forEach(item => {
+        const btn = document.getElementById(item.id);
+        if (!btn) return;
+        const isActive = item.view === view;
+        const icon = btn.querySelector('.sidebar-icon');
+        if (isActive) {
+            btn.className = 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold bg-emerald-50 text-emerald-800 shadow-2xs transition-all';
+            if (icon) {
+                icon.classList.remove('text-slate-400');
+                icon.classList.add('text-emerald-600');
+            }
+        } else {
+            btn.className = 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all';
+            if (icon) {
+                icon.classList.remove('text-emerald-600');
+                icon.classList.add('text-slate-400');
+            }
+        }
+    });
+
+    // Sesuaikan lebar konten tengah agar tampilan tabel jurnal/takziah lega di desktop
+    const centerCol = document.getElementById('main-content-column');
+    if (centerCol) {
+        if (view === 'jurnal' || view === 'takziah') {
+            centerCol.classList.remove('lg:max-w-[620px]');
+            centerCol.classList.add('lg:max-w-[880px]');
+        } else {
+            centerCol.classList.remove('lg:max-w-[880px]');
+            centerCol.classList.add('lg:max-w-[620px]');
+        }
+    }
+}
+
+function syncSidebarSearch(query) {
+    const mainSearch = document.getElementById('search-input');
+    if (mainSearch) {
+        mainSearch.value = query;
+        refreshDashboard();
+    }
 }
 
 function setFeedLayoutMode(mode) {

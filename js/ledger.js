@@ -573,6 +573,21 @@ function syncTopKpiCardsRealtime() {
 
     const ratio = totalCashAvailable > 0 ? Math.round((displayOut / totalCashAvailable) * 100) : 0;
     if (storyRatioEl) storyRatioEl.textContent = `${ratio}%`;
+
+    // Sync Panel Samping Desktop (ala TikTok)
+    const rightBalEl = document.getElementById('right-panel-balance');
+    const rightInEl = document.getElementById('right-panel-in');
+    const rightOutEl = document.getElementById('right-panel-out');
+    if (rightBalEl) rightBalEl.textContent = `Rp${formatIndoDots(endingCashBalance)}`;
+    if (rightInEl) rightInEl.textContent = `+ Rp${formatIndoDots(displayIn)}`;
+    if (rightOutEl) rightOutEl.textContent = `- Rp${formatIndoDots(displayOut)}`;
+
+    if (typeof takziahState !== 'undefined') {
+        const memEl = document.getElementById('right-panel-takziah-members');
+        const evEl = document.getElementById('right-panel-takziah-events');
+        if (memEl && takziahState.members) memEl.textContent = takziahState.members.length;
+        if (evEl && takziahState.events) evEl.textContent = takziahState.events.length;
+    }
 }
 
 async function testAndSyncSupabase() {

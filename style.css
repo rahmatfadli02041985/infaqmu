@@ -130,3 +130,15 @@ body {
   position: static !important;
   box-shadow: none !important;
 }
+
+/* =====================================================================
+   TAMPILAN DESKTOP ALA TIKTOK (MULTI-OS: WINDOWS, MAC, DLL)
+   ===================================================================== */
+@media (min-width: 1024px) {
+  #main-app {
+    background-color: #f1f5f9;
+  }
+  #main-content-column {
+    box-shadow: 0 4px 25px -4px rgba(0, 0, 0, 0.06);
+  }
+}
