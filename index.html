@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- Gaya Utama -->
-    <link rel="stylesheet" href="style.css?v=20261124e">
+    <link rel="stylesheet" href="style.css?v=20261125a">
 </head>
 <body class="min-h-screen antialiased selection:bg-emerald-200 selection:text-emerald-950">
 
@@ -119,19 +119,19 @@
         <div class="max-w-[1400px] mx-auto flex justify-center items-start min-h-screen">
 
             <!-- 1. SIDEBAR NAVIGASI KIRI (DESKTOP ALA TIKTOK) -->
-            <aside id="desktop-sidebar" class="hidden lg:flex flex-col w-64 shrink-0 sticky top-0 h-screen p-4 border-r border-slate-200/80 bg-white select-none z-30 justify-between overflow-y-auto no-scrollbar">
+            <aside id="desktop-sidebar" class="hidden lg:flex flex-col w-64 shrink-0 sticky top-0 h-screen p-4 border-r border-emerald-900/40 bg-gradient-to-b from-[#0a231c] via-[#0d2f26] to-[#061914] text-white select-none z-30 justify-between overflow-y-auto no-scrollbar shadow-lg">
                 <div class="space-y-4">
                     <!-- Brand & Logo -->
                     <div class="flex items-center gap-2.5 px-2 py-1">
-                        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-display font-extrabold text-sm shadow-md shadow-emerald-500/20">
+                        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center font-display font-black text-sm shadow-md shadow-emerald-500/30">
                             MU
                         </div>
                         <div class="min-w-0">
-                            <h1 class="font-display font-extrabold text-base text-slate-950 leading-tight tracking-tight flex items-center gap-1">
-                                Infaq<span class="text-emerald-600">MU</span>
-                                <svg class="w-3.5 h-3.5 text-sky-500 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <h1 class="font-display font-extrabold text-base text-white leading-tight tracking-tight flex items-center gap-1">
+                                Infaq<span class="text-emerald-400">MU</span>
+                                <svg class="w-3.5 h-3.5 text-sky-400 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             </h1>
-                            <p class="text-[11px] text-slate-400 font-medium truncate">PRM Bandar Malela</p>
+                            <p class="text-[11px] text-emerald-200/70 font-medium truncate">PRM Bandar Malela</p>
                         </div>
                     </div>
 
@@ -141,8 +141,8 @@
                             id="sidebar-search-input"
                             oninput="syncSidebarSearch(this.value)"
                             placeholder="Cari transaksi / berita..."
-                            class="w-full pl-9 pr-3 py-2 rounded-full bg-slate-100 hover:bg-slate-100/80 focus:bg-white border border-transparent focus:border-emerald-500 text-xs font-semibold text-slate-800 outline-none transition-all">
-                        <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            class="w-full pl-9 pr-3 py-2 rounded-full bg-white/10 hover:bg-white/15 focus:bg-white/20 border border-white/10 focus:border-emerald-400 text-xs font-semibold text-white placeholder:text-emerald-200/60 outline-none transition-all">
+                        <svg class="w-4 h-4 text-emerald-200/60 absolute left-3.5 top-2.5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                         </svg>
                     </div>
@@ -152,8 +152,8 @@
                         <button type="button"
                             id="sidebar-nav-btn-feed"
                             onclick="switchMainView('feed')"
-                            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all">
-                            <svg class="sidebar-icon w-5 h-5 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-emerald-100/80 hover:bg-white/10 hover:text-white transition-all">
+                            <svg class="sidebar-icon w-5 h-5 text-emerald-300/70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                             </svg>
                             <span class="truncate">Beranda</span>
@@ -162,8 +162,8 @@
                         <button type="button"
                             id="sidebar-nav-btn-wa"
                             onclick="switchMainView('wa')"
-                            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all">
-                            <svg class="sidebar-icon w-5 h-5 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-emerald-100/80 hover:bg-white/10 hover:text-white transition-all">
+                            <svg class="sidebar-icon w-5 h-5 text-emerald-300/70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
                             <span class="truncate">Laporan InfaqMu</span>
@@ -172,8 +172,8 @@
                         <button type="button"
                             id="sidebar-nav-btn-jurnal"
                             onclick="switchMainView('jurnal')"
-                            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all">
-                            <svg class="sidebar-icon w-5 h-5 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-emerald-100/80 hover:bg-white/10 hover:text-white transition-all">
+                            <svg class="sidebar-icon w-5 h-5 text-emerald-300/70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                             </svg>
                             <span class="truncate">Jurnal Kas Ranting</span>
@@ -182,8 +182,8 @@
                         <button type="button"
                             id="sidebar-nav-btn-takziah"
                             onclick="switchMainView('takziah')"
-                            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all">
-                            <svg class="sidebar-icon w-5 h-5 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-emerald-100/80 hover:bg-white/10 hover:text-white transition-all">
+                            <svg class="sidebar-icon w-5 h-5 text-emerald-300/70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                             </svg>
                             <span class="truncate">Iuran Takziah</span>
@@ -192,22 +192,22 @@
                         <button type="button"
                             id="sidebar-nav-btn-stats"
                             onclick="switchMainView('stats')"
-                            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all">
-                            <svg class="sidebar-icon w-5 h-5 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-emerald-100/80 hover:bg-white/10 hover:text-white transition-all">
+                            <svg class="sidebar-icon w-5 h-5 text-emerald-300/70 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                             </svg>
                             <span class="truncate">Statistik & Grafik</span>
                         </button>
                     </nav>
 
-                    <hr class="border-slate-100 my-2">
+                    <hr class="border-white/10 my-2">
 
                     <!-- Bagian Tombol Aksi Admin & Cloud -->
                     <div id="sidebar-admin-section" class="space-y-1.5 px-1">
                         <button type="button"
                             id="sidebar-btn-create-post"
                             onclick="openNewsModal()"
-                            class="hidden w-full items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all">
+                            class="hidden w-full items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-950/40 active:scale-95 transition-all">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
                                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -218,8 +218,8 @@
                         <button type="button"
                             id="sidebar-btn-security"
                             onclick="openSecurityModal()"
-                            class="hidden w-full items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-amber-50 hover:text-amber-800 transition-all">
-                            <svg class="w-5 h-5 text-amber-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            class="hidden w-full items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-emerald-100/90 hover:bg-amber-400/20 hover:text-amber-300 transition-all">
+                            <svg class="w-5 h-5 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                             </svg>
                             <span class="truncate">Pengaturan & PIN</span>
@@ -227,8 +227,8 @@
 
                         <button type="button"
                             onclick="handleManualRefresh()"
-                            class="w-full flex items-center gap-3 px-3.5 py-2 rounded-2xl text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all">
-                            <svg class="w-4 h-4 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            class="w-full flex items-center gap-3 px-3.5 py-2 rounded-2xl text-xs font-semibold text-emerald-200/80 hover:bg-white/10 hover:text-white transition-all">
+                            <svg class="w-4 h-4 text-emerald-300/80 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
                             </svg>
                             <span class="truncate">Sinkronkan Cloud</span>
@@ -236,8 +236,8 @@
 
                         <button type="button"
                             onclick="lockApplication()"
-                            class="w-full flex items-center gap-3 px-3.5 py-2 rounded-2xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-all">
-                            <svg class="w-4 h-4 text-rose-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            class="w-full flex items-center gap-3 px-3.5 py-2 rounded-2xl text-xs font-semibold text-rose-300 hover:bg-rose-500/20 hover:text-rose-200 transition-all">
+                            <svg class="w-4 h-4 text-rose-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                             </svg>
                             <span class="truncate">Kunci Aplikasi</span>
@@ -246,18 +246,18 @@
                 </div>
 
                 <!-- Footer User Profile di Sidebar Bawah -->
-                <div class="pt-3 border-t border-slate-100">
-                    <div class="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 border border-slate-200/60">
+                <div class="pt-3 border-t border-white/10">
+                    <div class="flex items-center justify-between p-2.5 rounded-2xl bg-white/5 border border-white/10">
                         <div class="flex items-center gap-2.5 min-w-0">
-                            <div class="w-8 h-8 rounded-full bg-emerald-950 text-emerald-300 font-bold text-xs flex items-center justify-center shrink-0 border border-emerald-800">
+                            <div class="w-8 h-8 rounded-full bg-emerald-500 text-slate-950 font-black text-xs flex items-center justify-center shrink-0">
                                 IM
                             </div>
                             <div class="min-w-0">
-                                <div class="text-[11px] font-bold text-slate-900 truncate">InfaqMU Peduli</div>
-                                <div id="sidebar-role-badge" class="text-[10px] font-semibold text-emerald-700">Jamaah</div>
+                                <div class="text-[11px] font-bold text-white truncate">InfaqMU Peduli</div>
+                                <div id="sidebar-role-badge" class="text-[10px] font-semibold text-emerald-300">Jamaah</div>
                             </div>
                         </div>
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" title="Online Cloud"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0 shadow-sm shadow-emerald-400/50" title="Online Cloud"></span>
                     </div>
                 </div>
             </aside>
@@ -562,6 +562,15 @@
                     </div>
 
                     <div id="wa-expense-rows-container" class="space-y-2.5"></div>
+                </div>
+
+                <!-- Input Catatan atau Keterangan Tambahan -->
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-1.5">
+                    <label class="block text-xs font-bold text-slate-800 flex items-center justify-between">
+                        <span>Catatan atau Keterangan</span>
+                        <span class="text-[10px] text-slate-400 font-normal">Opsional</span>
+                    </label>
+                    <textarea id="wa-notes" rows="2" disabled oninput="updateWaLivePreview()" placeholder="Tulis catatan atau keterangan tambahan (opsional)..." class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 outline-none focus:border-emerald-500 transition-colors resize-y leading-relaxed"></textarea>
                 </div>
 
                 <button type="button" id="btn-publish-wa-to-feed" onclick="saveAndPublishWaReport()" disabled class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-emerald-700 disabled:opacity-45 text-white font-bold text-xs shadow-md transition-all">
@@ -965,11 +974,11 @@
     </div>
 
     <!-- SKRIP APLIKASI TERMODULARISASI -->
-    <script src="js/config.js"></script>
-    <script src="js/ledger.js?v=20261124f"></script>
-    <script src="js/wa-report.js"></script>
-    <script src="js/takziah.js?v=20261124b"></script>
-    <script src="js/jurnal.js?v=20261124e"></script>
-    <script src="js/app.js?v=20261124f"></script>
+    <script src="js/config.js?v=20261125a"></script>
+    <script src="js/ledger.js?v=20261125a"></script>
+    <script src="js/wa-report.js?v=20261125a"></script>
+    <script src="js/takziah.js?v=20261125a"></script>
+    <script src="js/jurnal.js?v=20261125a"></script>
+    <script src="js/app.js?v=20261125a"></script>
 </body>
 </html>

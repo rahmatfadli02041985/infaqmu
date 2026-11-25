@@ -69,6 +69,8 @@ function toggleWaFormEditMode(enableEdit) {
     document.getElementById('wa-prev-label').disabled = !enableEdit;
     document.getElementById('wa-prev-amount').disabled = !enableEdit;
     document.getElementById('wa-expense-group-title').disabled = !enableEdit;
+    const notesEl = document.getElementById('wa-notes');
+    if (notesEl) notesEl.disabled = !enableEdit;
 
     renderWaIncomeRows();
     renderWaExpenseRows();
@@ -143,6 +145,7 @@ function loadWaReportForPeriod(year, month, syncTopFilter = false) {
             prevAmount: autoCarryBalance,
             expenseGroupTitle: 'Belanja sembako',
             isDisbursementCompleted: false,
+            notes: '',
             expenses: [{ name: 'Beras', qty: 1, unit: 'sak', price: 0 }]
         };
     }
@@ -195,6 +198,8 @@ function initWaEditorFromState() {
     document.getElementById('wa-prev-label').value = waFormState.prevLabel;
     document.getElementById('wa-prev-amount').value = formatIndoDots(waFormState.prevAmount);
     document.getElementById('wa-expense-group-title').value = waFormState.expenseGroupTitle;
+    const notesEl = document.getElementById('wa-notes');
+    if (notesEl) notesEl.value = waFormState.notes || '';
 
     renderWaIncomeRows();
     renderWaExpenseRows();
@@ -377,6 +382,7 @@ function buildWaReportCalculationFromState(reportObj) {
     });
 
     const endingBalance = totalIncomeAll - totalExpenseAll;
+    const notesText = (reportObj.notes || '').trim();
 
     const waText = [
         "Assalamu'alaikum warohmatullahi wabarokatuh",
@@ -394,11 +400,12 @@ function buildWaReportCalculationFromState(reportObj) {
         `Total pengeluaran = Rp. ${formatIndoDots(totalExpenseAll)},-`,
         "",
         `Saldo Infaqmu bulan ${monthName} = Rp. ${formatIndoDots(totalIncomeAll)} - Rp. ${formatIndoDots(totalExpenseAll)} = Rp. ${formatIndoDots(endingBalance)},-`,
+        ...(notesText ? ["", "*Catatan / Keterangan:*", notesText] : []),
         "",
         "_Wassalamu'alaikum warohmatullahi wabarokatuh._ 🙏"
     ].join('\n');
 
-    return { monthName, yearStr, totalNewIncome, totalIncomeAll, prevAmt, totalExpenseAll, endingBalance, incomeLines, expenseLines, waText };
+    return { monthName, yearStr, totalNewIncome, totalIncomeAll, prevAmt, totalExpenseAll, endingBalance, incomeLines, expenseLines, waText, notesText };
 }
 
 function buildWaReportCalculationAndText() {
@@ -408,6 +415,8 @@ function buildWaReportCalculationAndText() {
         waFormState.prevLabel = document.getElementById('wa-prev-label').value.trim() || 'Sisa saldo bulan sebelumnya';
         waFormState.prevAmount = parseIndoNumber(document.getElementById('wa-prev-amount').value);
         waFormState.expenseGroupTitle = document.getElementById('wa-expense-group-title').value.trim() || 'Belanja sembako';
+        const notesEl = document.getElementById('wa-notes');
+        if (notesEl) waFormState.notes = notesEl.value.trim();
     }
     return buildWaReportCalculationFromState(waFormState);
 }
@@ -541,7 +550,7 @@ async function saveAndPublishWaReport() {
             type: 'news',
             category: 'Penyaluran',
             title: `Laporan & Penyaluran InfaqMU Bulan ${calc.monthName} ${calc.yearStr}`,
-            description: `Alhamdulillah, telah terlaksana ${waFormState.expenseGroupTitle} untuk bulan ${calc.monthName} ${calc.yearStr}. Rincian: ${calc.expenseLines.join(' ')} Total tersalurkan Rp ${formatIndoDots(calc.totalExpenseAll)},- dengan saldo akhir kas Rp ${formatIndoDots(calc.endingBalance)},-.`,
+            description: `Alhamdulillah, telah terlaksana ${waFormState.expenseGroupTitle} untuk bulan ${calc.monthName} ${calc.yearStr}. Rincian: ${calc.expenseLines.join(' ')} Total tersalurkan Rp ${formatIndoDots(calc.totalExpenseAll)},- dengan saldo akhir kas Rp ${formatIndoDots(calc.endingBalance)},-.` + (calc.notesText ? ` Catatan: ${calc.notesText}` : ''),
             amount: calc.totalExpenseAll,
             tx_date: txDateStr,
             theme: 'emerald',

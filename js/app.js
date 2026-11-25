@@ -568,16 +568,14 @@ function updateSidebarNavActive(view) {
         const isActive = item.view === view;
         const icon = btn.querySelector('.sidebar-icon');
         if (isActive) {
-            btn.className = 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold bg-emerald-50 text-emerald-800 shadow-2xs transition-all';
+            btn.className = 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold bg-emerald-500 text-white shadow-md shadow-emerald-950/40 transition-all';
             if (icon) {
-                icon.classList.remove('text-slate-400');
-                icon.classList.add('text-emerald-600');
+                icon.className = 'sidebar-icon w-5 h-5 text-white shrink-0';
             }
         } else {
-            btn.className = 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all';
+            btn.className = 'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-emerald-100/80 hover:bg-white/10 hover:text-white transition-all';
             if (icon) {
-                icon.classList.remove('text-emerald-600');
-                icon.classList.add('text-slate-400');
+                icon.className = 'sidebar-icon w-5 h-5 text-emerald-300/70 shrink-0';
             }
         }
     });
