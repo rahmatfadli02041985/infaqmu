@@ -506,8 +506,7 @@ async function saveAndPublishWaReport() {
     waFormState.isDisbursementCompleted = shouldPublishNews;
     waReportsStore[periodKey] = JSON.parse(JSON.stringify(waFormState));
 
-    propagateCarryOverToSubsequentMonths(waFormState.year, waFormState.month);
-
+    // Perintah User: Hanya simpan ke database bulan yang diinput saja (tidak memodifikasi bulan lain)
     const txDateStr = `${waFormState.year}-${waFormState.month}-25`;
     const ymPrefix = `${waFormState.year}-${waFormState.month}`;
 
@@ -565,22 +564,129 @@ async function saveAndPublishWaReport() {
     refreshDashboard();
 
     const statusMsg = shouldPublishNews
-        ? `Laporan & berita ${calc.monthName} ${calc.yearStr} berhasil diterbitkan! Saldo akhir Rp ${formatIndoDots(calc.endingBalance)}.`
-        : `Rekap kas ${calc.monthName} ${calc.yearStr} tersimpan. Berita otomatis ditunda karena pengeluaran/penyaluran bulan ini belum selesai.`;
+        ? `Laporan bulan ${calc.monthName} ${calc.yearStr} berhasil disimpan ke database!`
+        : `Rekap kas bulan ${calc.monthName} ${calc.yearStr} berhasil disimpan ke database.`;
 
     if (isCloudConnected) {
         try {
+            // Hapus data bulan ini terlebih dahulu dari Supabase agar tidak ada duplikasi
+            await supabaseRestFetch(`infaq_transactions?tx_date=gte.${ymPrefix}-01&tx_date=lte.${ymPrefix}-31`, {
+                method: 'DELETE'
+            }).catch(() => {});
+
+            // Kirim hanya transaksi bulan ini ke Supabase
             await supabaseRestFetch('infaq_transactions', {
                 method: 'POST',
                 headers: { 'Prefer': 'return=representation' },
                 body: newRows.map(({ id, ...rest }) => rest)
             });
-            showToast(statusMsg, shouldPublishNews ? 'success' : 'info');
+            showToast(statusMsg, 'success');
         } catch (e) {
-            showToast('Tersimpan di perangkat (Cloud gagal dijangkau).', 'info');
+            showToast('Tersimpan di database lokal (Cloud gagal dijangkau).', 'info');
         }
     } else {
-        showToast(statusMsg, shouldPublishNews ? 'success' : 'info');
+        showToast(statusMsg, 'success');
+    }
+}
+
+async function saveAllMonthsToDatabase() {
+    if (currentRole !== 'admin') {
+        showToast('Hanya admin yang dapat menyimpan seluruh data ke database.', 'error');
+        return;
+    }
+
+    const confirmed = await showInAppDialog({
+        title: 'Simpan Seluruh Data ke Database?',
+        message: 'Aksi ini akan menyinkronkan seluruh rekapan bulanan dan transaksi infaq ke database (lokal & Cloud). Lanjutkan?',
+        confirmText: 'Ya, Simpan Semua',
+        cancelText: 'Batal'
+    });
+    if (!confirmed) return;
+
+    showToast('Memproses penyimpanan seluruh data ke database...', 'info');
+
+    // 1. Jika form sedang dalam mode edit, simpan perubahan bulan aktif terlebih dahulu
+    if (isWaFormEditable) {
+        buildWaReportCalculationAndText();
+        const curKey = `${waFormState.year}-${waFormState.month}`;
+        waReportsStore[curKey] = JSON.parse(JSON.stringify(waFormState));
+        toggleWaFormEditMode(false);
+    }
+
+    // 2. Harmonisasi seluruh transaksi dari semua bulan di waReportsStore
+    const allMonths = Object.keys(waReportsStore).sort();
+    allMonths.forEach(ym => {
+        const report = waReportsStore[ym];
+        if (!report) return;
+        const [y, m] = ym.split('-');
+        const calc = buildWaReportCalculationFromState(report);
+        const txDateStr = `${y}-${m}-25`;
+        const ymPrefix = ym;
+
+        // Bersihkan transaksi in & out bulan tersebut
+        transactions = transactions.filter(t => !(t.tx_date && t.tx_date.startsWith(ymPrefix) && (t.type === 'in' || t.type === 'out')));
+
+        const inRow = {
+            id: 'local-in-' + ym.replace('-', '') + '-' + Date.now(),
+            type: 'in',
+            category: report.incomes?.[0]?.name || 'Kaleng Infaqmu',
+            title: `Penerimaan Infaq Bulan ${calc.monthName} ${calc.yearStr}`,
+            description: `${calc.incomeLines.join(' ')} ${report.prevLabel || 'Sisa saldo sebelumnya'} = Rp ${formatIndoDots(calc.prevAmt)},- (Total: Rp ${formatIndoDots(calc.totalIncomeAll)},-).`,
+            amount: calc.totalIncomeAll,
+            tx_date: txDateStr,
+            theme: 'emerald',
+            aamiin_count: 1
+        };
+        transactions.push(inRow);
+
+        const hasDisbursement = Number(calc.totalExpenseAll) > 0;
+        if (hasDisbursement) {
+            const outRow = {
+                id: 'local-out-' + ym.replace('-', '') + '-' + (Date.now() + 1),
+                type: 'out',
+                category: report.expenseGroupTitle || 'Belanja Sembako',
+                title: `${report.expenseGroupTitle || 'Penyaluran'} (${calc.monthName} ${calc.yearStr})`,
+                description: `Rincian: ${calc.expenseLines.join(' ')} (Total Pengeluaran: Rp ${formatIndoDots(calc.totalExpenseAll)},- | Saldo Akhir: Rp ${formatIndoDots(calc.endingBalance)},-).`,
+                amount: calc.totalExpenseAll,
+                tx_date: txDateStr,
+                theme: 'amber',
+                aamiin_count: 1
+            };
+            transactions.push(outRow);
+        }
+
+        const autoNewsId = `local-news-auto-${ymPrefix}`;
+        transactions = transactions.filter(t => String(t.id) !== autoNewsId);
+        if (hasDisbursement && report.isDisbursementCompleted) {
+            transactions.push({
+                id: autoNewsId,
+                type: 'news',
+                category: 'Penyaluran',
+                title: `Laporan & Penyaluran InfaqMU Bulan ${calc.monthName} ${calc.yearStr}`,
+                description: `Alhamdulillah, telah terlaksana ${report.expenseGroupTitle || 'Penyaluran'} untuk bulan ${calc.monthName} ${calc.yearStr}. Rincian: ${calc.expenseLines.join(' ')} Total tersalurkan Rp ${formatIndoDots(calc.totalExpenseAll)},- dengan saldo akhir kas Rp ${formatIndoDots(calc.endingBalance)},-.` + (report.notes ? ` Catatan: ${report.notes}` : ''),
+                amount: calc.totalExpenseAll,
+                tx_date: txDateStr,
+                theme: 'emerald',
+                aamiin_count: 1
+            });
+        }
+    });
+
+    deduplicateMonthlyLedgerRecords();
+    saveLocalCache();
+    renderPublishedMonthsBar();
+    refreshDashboard();
+
+    // 3. Jika Cloud terhubung, unggah seluruh data lokal ke Supabase
+    if (isCloudConnected) {
+        try {
+            await pushLocalDataToCloud();
+            showToast(`Seluruh data (${allMonths.length} bulan) berhasil disimpan & disinkronkan ke Cloud!`, 'success');
+        } catch (err) {
+            showToast('Seluruh data tersimpan di database lokal (Cloud gagal dijangkau).', 'info');
+        }
+    } else {
+        showToast(`Seluruh data (${allMonths.length} bulan) berhasil disimpan ke database lokal!`, 'success');
     }
 }
 
