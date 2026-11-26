@@ -2,8 +2,8 @@
 // KONFIGURASI UTAMA APLIKASI INFAQMU (config.js) — VERSI 3.0 (v.3)
 // =====================================================================
 
-const DEFAULT_SUPABASE_URL = "https://pmcqlufrsrfkfblljdzb.supabase.co";
-const DEFAULT_SUPABASE_KEY = "sb_publishable_D0xmTYa3K7pO2d15zsdD_A_Tx-7bh9y";
+const DEFAULT_SUPABASE_URL = "https://btkifsvdtzkacwmafkfm.supabase.co";
+const DEFAULT_SUPABASE_KEY = "sb_publishable_z6G9H0dPCii6zPKasH6V6Q_H_BQIzSf";
 
 const STORAGE_KEYS = {
     SB_CONFIG: 'infaqmu_supabase_creds_v5',
