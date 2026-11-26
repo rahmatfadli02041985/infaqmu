@@ -27,6 +27,14 @@ function isValidSupabaseKey(token) {
     return typeof token === 'string' && token.trim().length >= 10;
 }
 
+function sanitizeSupabaseUrl(rawUrl) {
+    if (!rawUrl || typeof rawUrl !== 'string') return '';
+    let cleaned = rawUrl.trim().replace(/\/+$/, '');
+    // Bersihkan jika pengguna tidak sengaja menempelkan path /rest/v1 atau /rest/v1/
+    cleaned = cleaned.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+    return cleaned;
+}
+
 function initSupabaseCredentials() {
     let savedCreds = null;
     try {
@@ -34,14 +42,14 @@ function initSupabaseCredentials() {
         if (raw) savedCreds = JSON.parse(raw);
     } catch (e) {}
 
-    const url = (savedCreds && typeof savedCreds.url === 'string' && savedCreds.url.trim())
+    const rawUrl = (savedCreds && typeof savedCreds.url === 'string' && savedCreds.url.trim())
         ? savedCreds.url.trim()
         : DEFAULT_SUPABASE_URL.trim();
     const key = (savedCreds && typeof savedCreds.key === 'string' && savedCreds.key.trim())
         ? savedCreds.key.trim()
         : DEFAULT_SUPABASE_KEY.trim();
 
-    sbCredentials = { url: url.replace(/\/+$/, ''), key };
+    sbCredentials = { url: sanitizeSupabaseUrl(rawUrl), key };
 
     if (sbCredentials.url && sbCredentials.key && window.supabase && isValidSupabaseKey(sbCredentials.key)) {
         try {
@@ -680,9 +688,18 @@ function syncTopKpiCardsRealtime() {
 }
 
 async function testAndSyncSupabase() {
+    const rawUrl = document.getElementById('set-sb-url').value;
+    const rawKey = document.getElementById('set-sb-key').value;
+    const cleanedUrl = sanitizeSupabaseUrl(rawUrl);
+    const cleanedKey = rawKey.trim();
+
+    // Perbarui nilai di form agar bersih
+    document.getElementById('set-sb-url').value = cleanedUrl;
+    document.getElementById('set-sb-key').value = cleanedKey;
+
     sbCredentials = {
-        url: document.getElementById('set-sb-url').value.trim().replace(/\/+$/, ''),
-        key: document.getElementById('set-sb-key').value.trim()
+        url: cleanedUrl,
+        key: cleanedKey
     };
     localStorage.setItem(STORAGE_KEYS.SB_CONFIG, JSON.stringify(sbCredentials));
     initSupabaseCredentials();
