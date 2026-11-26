@@ -30,8 +30,8 @@ function isValidSupabaseKey(token) {
 function sanitizeSupabaseUrl(rawUrl) {
     if (!rawUrl || typeof rawUrl !== 'string') return '';
     let cleaned = rawUrl.trim().replace(/\/+$/, '');
-    // Bersihkan jika pengguna tidak sengaja menempelkan path /rest/v1 atau /rest/v1/
-    cleaned = cleaned.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+    // Bersihkan jika pengguna menyertakan path /rest/v1 atau /rest/v1/ atau parameter query
+    cleaned = cleaned.replace(/\/rest\/v1(\/.*)?$/i, '').replace(/\/+$/, '');
     return cleaned;
 }
 

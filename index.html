@@ -226,6 +226,16 @@
                         </button>
 
                         <button type="button"
+                            id="sidebar-btn-activity-logs"
+                            onclick="openActivityLogsModal()"
+                            class="hidden w-full items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold text-emerald-100/90 hover:bg-sky-400/20 hover:text-sky-300 transition-all">
+                            <svg class="w-5 h-5 text-sky-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="truncate">Log Aktivitas Admin</span>
+                        </button>
+
+                        <button type="button"
                             onclick="handleManualRefresh()"
                             class="w-full flex items-center gap-3 px-3.5 py-2 rounded-2xl text-xs font-semibold text-emerald-200/80 hover:bg-white/10 hover:text-white transition-all">
                             <svg class="w-4 h-4 text-emerald-300/80 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -283,6 +293,9 @@
                 </button>
                 <button type="button" onclick="toggleSearchBar()" class="p-2 rounded-full hover:bg-slate-100 text-slate-700 transition-colors" title="Cari Postingan">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </button>
+                <button type="button" id="btn-open-activity-logs" onclick="openActivityLogsModal()" class="hidden p-2 rounded-full hover:bg-sky-50 text-sky-700 transition-colors" title="Log Aktivitas Admin">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </button>
                 <button type="button" id="btn-open-security" onclick="openSecurityModal()" class="hidden p-2 rounded-full hover:bg-amber-50 text-amber-700 transition-colors" title="Pengaturan Admin & Cloud">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -901,6 +914,29 @@
                     </button>
                 </div>
 
+                <!-- Backup Database ke Drive Lokal -->
+                <div class="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/80 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                <span>Cadangkan Database (Backup Lokal)</span>
+                            </div>
+                            <div class="text-[10px] text-amber-800 leading-tight mt-0.5">Simpan salinan seluruh data aplikasi ke file di penyimpanan drive lokal Anda.</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="backupDatabaseToLocalDrive('json')" class="py-2 px-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span>Unduh JSON (.json)</span>
+                        </button>
+                        <button type="button" onclick="backupDatabaseToLocalDrive('sql')" class="py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all">
+                            <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7zm0 5c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3"/></svg>
+                            <span>Unduh SQL (.sql)</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="space-y-2.5">
                     <div class="grid grid-cols-2 gap-2">
                         <div>
@@ -955,6 +991,45 @@
                     <button type="submit" class="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold">Simpan Pengaturan</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: LOG AKTIVITAS ADMIN -->
+    <div id="activity-logs-modal" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-[560px] w-full p-5 sm:p-6 max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-base text-slate-900 leading-tight">Log Aktivitas Admin</h3>
+                        <p class="text-[11px] text-slate-500">Riwayat aksi perubahan data, login, dan konfigurasi</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeActivityLogsModal()" class="text-xs font-bold text-slate-500 hover:text-slate-800">Tutup</button>
+            </div>
+
+            <!-- Toolbar Pencarian & Filter Log -->
+            <div class="pt-3 pb-2 flex items-center justify-between gap-2 shrink-0">
+                <div class="relative flex-1">
+                    <input type="text" id="log-search-input" oninput="renderActivityLogsList()" placeholder="Cari aktivitas / aksi..." class="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs outline-none focus:border-sky-500 focus:bg-white">
+                    <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                <button type="button" onclick="clearActivityLogs()" class="px-2.5 py-1.5 rounded-xl text-rose-600 hover:bg-rose-50 text-[11px] font-bold border border-rose-200 transition-colors shrink-0">
+                    Bersihkan Log
+                </button>
+            </div>
+
+            <!-- Kontainer Daftar Log -->
+            <div id="activity-logs-container" class="flex-1 overflow-y-auto space-y-2 py-2 pr-1 no-scrollbar text-xs">
+                <!-- Render dinamis via JS -->
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
+                <span id="log-count-info">0 aktivitas tercatat</span>
+                <span class="text-[10px] text-slate-400">Tersimpan otomatis di penyimpanan lokal</span>
+            </div>
         </div>
     </div>
 

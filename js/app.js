@@ -350,6 +350,7 @@ function verifyAndUnlock(enteredPin) {
     }
 
     if (enteredPin === appSettings.adminPin) {
+        logAdminActivity('Login Berhasil', 'Admin berhasil masuk ke sistem menggunakan PIN');
         grantAccess('admin');
     } else if (enteredPin === appSettings.viewerPin) {
         grantAccess('viewer');
@@ -391,6 +392,15 @@ function grantAccess(role) {
     if (sidebarSecBtn) {
         sidebarSecBtn.classList.toggle('hidden', !isAdmin);
         sidebarSecBtn.classList.toggle('flex', isAdmin);
+    }
+    const sidebarLogBtn = document.getElementById('sidebar-btn-activity-logs');
+    if (sidebarLogBtn) {
+        sidebarLogBtn.classList.toggle('hidden', !isAdmin);
+        sidebarLogBtn.classList.toggle('flex', isAdmin);
+    }
+    const topBarLogBtn = document.getElementById('btn-open-activity-logs');
+    if (topBarLogBtn) {
+        topBarLogBtn.classList.toggle('hidden', !isAdmin);
     }
 
     // Navigasi Beranda: tampil jika Admin atau jika diizinkan di Pengaturan
@@ -1408,10 +1418,13 @@ async function handleSaveSecuritySettings(e) {
         return;
     }
 
+    const rawUrl = document.getElementById('set-sb-url').value;
+    const cleanedUrl = typeof sanitizeSupabaseUrl === 'function' ? sanitizeSupabaseUrl(rawUrl) : rawUrl.trim().replace(/\/rest\/v1(\/.*)?$/i, '').replace(/\/+$/, '');
     sbCredentials = {
-        url: document.getElementById('set-sb-url').value.trim().replace(/\/+$/, ''),
+        url: cleanedUrl,
         key: document.getElementById('set-sb-key').value.trim()
     };
+    document.getElementById('set-sb-url').value = cleanedUrl;
     localStorage.setItem(STORAGE_KEYS.SB_CONFIG, JSON.stringify(sbCredentials));
 
     appSettings = {
@@ -1441,6 +1454,113 @@ function resetDemoData() {
 
 async function handleManualRefresh() {
     await syncInitialData(true);
+}
+
+function backupDatabaseToLocalDrive(format = 'json') {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const dateFormatted = new Date().toLocaleDateString('id-ID', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+
+    if (format === 'sql') {
+        const sqlLines = [
+            `-- ==============================================================`,
+            `-- CADANGAN DATABASE INFAQMU (SQL DUMP)`,
+            `-- Tanggal Backup : ${new Date().toLocaleString('id-ID')}`,
+            `-- Lembaga        : ${appSettings.orgName || 'INFAQMU'}`,
+            `-- ==============================================================`,
+            ``,
+            `-- 1. Pengaturan Lembaga`,
+            `INSERT INTO public.infaq_settings (id, org_name, org_handle, org_bio, visitor_pin, admin_pin)`,
+            `VALUES (1, ${escapeSql(appSettings.orgName)}, ${escapeSql(appSettings.orgHandle)}, ${escapeSql(appSettings.orgBio)}, ${escapeSql(appSettings.viewerPin)}, ${escapeSql(appSettings.adminPin)})`,
+            `ON CONFLICT (id) DO UPDATE SET`,
+            `    org_name = EXCLUDED.org_name,`,
+            `    org_handle = EXCLUDED.org_handle,`,
+            `    org_bio = EXCLUDED.org_bio,`,
+            `    visitor_pin = EXCLUDED.visitor_pin,`,
+            `    admin_pin = EXCLUDED.admin_pin;`,
+            ``,
+            `-- 2. Transaksi Kas & Berita Kegiatan (${transactions.length} baris)`
+        ];
+
+        if (transactions.length > 0) {
+            sqlLines.push(`INSERT INTO public.infaq_transactions (type, category, title, description, amount, tx_date, theme, aamiin_count) VALUES`);
+            const rowValues = transactions.map((t, idx) => {
+                const isLast = idx === transactions.length - 1;
+                const type = escapeSql(t.type || 'in');
+                const cat = escapeSql(t.category || 'Kaleng Infaqmu');
+                const title = escapeSql(t.title || 'Transaksi');
+                const desc = escapeSql(t.description || '');
+                const amount = Number(t.amount) || 0;
+                const txDate = escapeSql(t.tx_date || '2026-01-01');
+                const theme = escapeSql(t.theme || 'emerald');
+                const aamiin = Number(t.aamiin_count) || 0;
+                return `  (${type}, ${cat}, ${title}, ${desc}, ${amount}, ${txDate}, ${theme}, ${aamiin})${isLast ? ';' : ','}`;
+            });
+            sqlLines.push(...rowValues);
+        }
+
+        const sqlContent = sqlLines.join('\n');
+        const blob = new Blob([sqlContent], { type: 'application/sql;charset=utf-8;' });
+        triggerDownload(blob, `Backup_Database_InfaqMU_${dateFormatted}_${timestamp}.sql`);
+        showToast('File backup SQL berhasil disimpan ke drive lokal!', 'success');
+        return;
+    }
+
+    // Default: Backup JSON Lengkap (Settings, Transaksi, Laporan WA, Iuran Takziah, Jurnal Kas)
+    let takziahData = null;
+    try {
+        const rawT = localStorage.getItem((typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.TAKZIAH) ? STORAGE_KEYS.TAKZIAH : 'infaqmu_takziah_data_v1');
+        if (rawT) takziahData = JSON.parse(rawT);
+        else if (typeof takziahState !== 'undefined') takziahData = takziahState;
+    } catch (e) {}
+
+    let jurnalKasData = null;
+    try {
+        const rawJ = localStorage.getItem((typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.JURNAL_KAS) ? STORAGE_KEYS.JURNAL_KAS : 'infaqmu_jurnal_kas_v1');
+        if (rawJ) jurnalKasData = JSON.parse(rawJ);
+        else if (typeof jurnalKasState !== 'undefined') jurnalKasData = jurnalKasState;
+    } catch (e) {}
+
+    const fullBackup = {
+        app: 'InfaqMU',
+        version: '3.0',
+        exportedAt: new Date().toISOString(),
+        exportedBy: currentRole || 'admin',
+        summary: {
+            totalTransactions: transactions.length,
+            totalWaReports: Object.keys(waReportsStore || {}).length,
+            totalTakziahMembers: takziahData?.members?.length || 0,
+            totalJurnalKasRows: jurnalKasData?.length || 0
+        },
+        data: {
+            settings: appSettings,
+            transactions: transactions,
+            waReportsStore: waReportsStore,
+            takziah: takziahData,
+            jurnalKas: jurnalKasData
+        }
+    };
+
+    const jsonString = JSON.stringify(fullBackup, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+    triggerDownload(blob, `Backup_Database_InfaqMU_${dateFormatted}_${timestamp}.json`);
+    showToast('File backup JSON berhasil disimpan ke drive lokal!', 'success');
+}
+
+function escapeSql(str) {
+    if (str === null || str === undefined) return 'NULL';
+    return `'${String(str).replace(/'/g, "''")}'`;
+}
+
+function triggerDownload(blob, filename) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+    }, 150);
 }
 
 function exportToCSV() {
@@ -1480,4 +1600,154 @@ function showToast(message, type = 'info') {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 300);
     }, 2800);
+}
+
+// =====================================================================
+// SISTEM LOG AKTIVITAS ADMIN (AUDIT TRAIL)
+// =====================================================================
+
+function logAdminActivity(action, details = '', type = 'info') {
+    try {
+        const key = (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.ACTIVITY_LOGS)
+            ? STORAGE_KEYS.ACTIVITY_LOGS
+            : 'infaqmu_activity_logs_v1';
+        let logs = [];
+        try {
+            const raw = localStorage.getItem(key);
+            if (raw) logs = JSON.parse(raw);
+        } catch (e) {
+            logs = [];
+        }
+        if (!Array.isArray(logs)) logs = [];
+
+        const now = new Date();
+        const newLog = {
+            id: 'log-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+            action: action || 'Aktivitas Admin',
+            details: details || '',
+            type: type || 'info', // 'info' | 'success' | 'warning' | 'danger'
+            timestamp: now.toISOString(),
+            formattedTime: now.toLocaleString('id-ID', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            })
+        };
+
+        logs.unshift(newLog);
+        // Simpan maksimal 150 log terakhir agar tidak membebani localStorage
+        if (logs.length > 150) logs = logs.slice(0, 150);
+        localStorage.setItem(key, JSON.stringify(logs));
+    } catch (err) {
+        console.warn('Gagal mencatat log aktivitas admin:', err);
+    }
+}
+
+function getActivityLogs() {
+    try {
+        const key = (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.ACTIVITY_LOGS)
+            ? STORAGE_KEYS.ACTIVITY_LOGS
+            : 'infaqmu_activity_logs_v1';
+        const raw = localStorage.getItem(key);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function openActivityLogsModal() {
+    if (currentRole !== 'admin') return;
+    const modal = document.getElementById('activity-logs-modal');
+    if (!modal) return;
+    const searchInput = document.getElementById('log-search-input');
+    if (searchInput) searchInput.value = '';
+    renderActivityLogsList();
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeActivityLogsModal() {
+    const modal = document.getElementById('activity-logs-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function renderActivityLogsList() {
+    const container = document.getElementById('activity-logs-container');
+    const counterInfo = document.getElementById('log-count-info');
+    if (!container) return;
+
+    const searchInput = document.getElementById('log-search-input');
+    const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+    const allLogs = getActivityLogs();
+    const filtered = query
+        ? allLogs.filter(l => (l.action && l.action.toLowerCase().includes(query)) || (l.details && l.details.toLowerCase().includes(query)))
+        : allLogs;
+
+    if (counterInfo) {
+        counterInfo.textContent = `${filtered.length} dari ${allLogs.length} aktivitas`;
+    }
+
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="py-12 text-center text-slate-400">
+                <svg class="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="font-medium">Belum ada riwayat aktivitas tercatat</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">Aksi admin seperti perubahan data, backup, dan login akan muncul di sini</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = filtered.map(log => {
+        let badgeColor = 'bg-slate-100 text-slate-700 border-slate-200';
+        let dotColor = 'bg-slate-400';
+        if (log.type === 'success') {
+            badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            dotColor = 'bg-emerald-500';
+        } else if (log.type === 'warning') {
+            badgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
+            dotColor = 'bg-amber-500';
+        } else if (log.type === 'danger') {
+            badgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
+            dotColor = 'bg-rose-500';
+        } else if (log.type === 'info') {
+            badgeColor = 'bg-sky-50 text-sky-700 border-sky-200';
+            dotColor = 'bg-sky-500';
+        }
+
+        return `
+            <div class="p-2.5 rounded-2xl border ${badgeColor} transition-all hover:shadow-sm">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5 font-bold text-[12px] text-slate-800">
+                        <span class="w-2 h-2 rounded-full ${dotColor}"></span>
+                        <span>${escapeHtml(log.action || 'Aktivitas')}</span>
+                    </div>
+                    <span class="text-[10px] text-slate-500 font-mono shrink-0">${log.formattedTime || ''}</span>
+                </div>
+                ${log.details ? `<p class="text-[11px] text-slate-600 mt-1 pl-3.5 leading-relaxed break-words">${escapeHtml(log.details)}</p>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function clearActivityLogs() {
+    if (confirm('Yakin ingin membersihkan semua riwayat log aktivitas admin?')) {
+        const key = (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.ACTIVITY_LOGS)
+            ? STORAGE_KEYS.ACTIVITY_LOGS
+            : 'infaqmu_activity_logs_v1';
+        localStorage.removeItem(key);
+        logAdminActivity('Log Dibersihkan', 'Riwayat log aktivitas admin telah dikosongkan', 'warning');
+        renderActivityLogsList();
+        showToast('Riwayat log aktivitas berhasil dibersihkan', 'info');
+    }
 }
