@@ -1443,6 +1443,113 @@ async function handleManualRefresh() {
     await syncInitialData(true);
 }
 
+function backupDatabaseToLocalDrive(format = 'json') {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const dateFormatted = new Date().toLocaleDateString('id-ID', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+
+    if (format === 'sql') {
+        const sqlLines = [
+            `-- ==============================================================`,
+            `-- CADANGAN DATABASE INFAQMU (SQL DUMP)`,
+            `-- Tanggal Backup : ${new Date().toLocaleString('id-ID')}`,
+            `-- Lembaga        : ${appSettings.orgName || 'INFAQMU'}`,
+            `-- ==============================================================`,
+            ``,
+            `-- 1. Pengaturan Lembaga`,
+            `INSERT INTO public.infaq_settings (id, org_name, org_handle, org_bio, visitor_pin, admin_pin)`,
+            `VALUES (1, ${escapeSql(appSettings.orgName)}, ${escapeSql(appSettings.orgHandle)}, ${escapeSql(appSettings.orgBio)}, ${escapeSql(appSettings.viewerPin)}, ${escapeSql(appSettings.adminPin)})`,
+            `ON CONFLICT (id) DO UPDATE SET`,
+            `    org_name = EXCLUDED.org_name,`,
+            `    org_handle = EXCLUDED.org_handle,`,
+            `    org_bio = EXCLUDED.org_bio,`,
+            `    visitor_pin = EXCLUDED.visitor_pin,`,
+            `    admin_pin = EXCLUDED.admin_pin;`,
+            ``,
+            `-- 2. Transaksi Kas & Berita Kegiatan (${transactions.length} baris)`
+        ];
+
+        if (transactions.length > 0) {
+            sqlLines.push(`INSERT INTO public.infaq_transactions (type, category, title, description, amount, tx_date, theme, aamiin_count) VALUES`);
+            const rowValues = transactions.map((t, idx) => {
+                const isLast = idx === transactions.length - 1;
+                const type = escapeSql(t.type || 'in');
+                const cat = escapeSql(t.category || 'Kaleng Infaqmu');
+                const title = escapeSql(t.title || 'Transaksi');
+                const desc = escapeSql(t.description || '');
+                const amount = Number(t.amount) || 0;
+                const txDate = escapeSql(t.tx_date || '2026-01-01');
+                const theme = escapeSql(t.theme || 'emerald');
+                const aamiin = Number(t.aamiin_count) || 0;
+                return `  (${type}, ${cat}, ${title}, ${desc}, ${amount}, ${txDate}, ${theme}, ${aamiin})${isLast ? ';' : ','}`;
+            });
+            sqlLines.push(...rowValues);
+        }
+
+        const sqlContent = sqlLines.join('\n');
+        const blob = new Blob([sqlContent], { type: 'application/sql;charset=utf-8;' });
+        triggerDownload(blob, `Backup_Database_InfaqMU_${dateFormatted}_${timestamp}.sql`);
+        showToast('File backup SQL berhasil disimpan ke drive lokal!', 'success');
+        return;
+    }
+
+    // Default: Backup JSON Lengkap (Settings, Transaksi, Laporan WA, Iuran Takziah, Jurnal Kas)
+    let takziahData = null;
+    try {
+        const rawT = localStorage.getItem((typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.TAKZIAH) ? STORAGE_KEYS.TAKZIAH : 'infaqmu_takziah_data_v1');
+        if (rawT) takziahData = JSON.parse(rawT);
+        else if (typeof takziahState !== 'undefined') takziahData = takziahState;
+    } catch (e) {}
+
+    let jurnalKasData = null;
+    try {
+        const rawJ = localStorage.getItem((typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.JURNAL_KAS) ? STORAGE_KEYS.JURNAL_KAS : 'infaqmu_jurnal_kas_v1');
+        if (rawJ) jurnalKasData = JSON.parse(rawJ);
+        else if (typeof jurnalKasState !== 'undefined') jurnalKasData = jurnalKasState;
+    } catch (e) {}
+
+    const fullBackup = {
+        app: 'InfaqMU',
+        version: '3.0',
+        exportedAt: new Date().toISOString(),
+        exportedBy: currentRole || 'admin',
+        summary: {
+            totalTransactions: transactions.length,
+            totalWaReports: Object.keys(waReportsStore || {}).length,
+            totalTakziahMembers: takziahData?.members?.length || 0,
+            totalJurnalKasRows: jurnalKasData?.length || 0
+        },
+        data: {
+            settings: appSettings,
+            transactions: transactions,
+            waReportsStore: waReportsStore,
+            takziah: takziahData,
+            jurnalKas: jurnalKasData
+        }
+    };
+
+    const jsonString = JSON.stringify(fullBackup, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+    triggerDownload(blob, `Backup_Database_InfaqMU_${dateFormatted}_${timestamp}.json`);
+    showToast('File backup JSON berhasil disimpan ke drive lokal!', 'success');
+}
+
+function escapeSql(str) {
+    if (str === null || str === undefined) return 'NULL';
+    return `'${String(str).replace(/'/g, "''")}'`;
+}
+
+function triggerDownload(blob, filename) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+    }, 150);
+}
+
 function exportToCSV() {
     const rows = [['Tanggal', 'Jenis', 'Kategori', 'Judul', 'Nominal']];
     transactions.forEach(t => {
