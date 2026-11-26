@@ -23,8 +23,8 @@ function getRealtimePeriods() {
     };
 }
 
-function isJwtFormat(token) {
-    return typeof token === 'string' && token.split('.').length === 3 && token.startsWith('eyJ');
+function isValidSupabaseKey(token) {
+    return typeof token === 'string' && token.trim().length >= 10;
 }
 
 function initSupabaseCredentials() {
@@ -34,11 +34,16 @@ function initSupabaseCredentials() {
         if (raw) savedCreds = JSON.parse(raw);
     } catch (e) {}
 
-    const url = (savedCreds && savedCreds.url) ? savedCreds.url.trim() : DEFAULT_SUPABASE_URL.trim();
-    const key = (savedCreds && savedCreds.key) ? savedCreds.key.trim() : DEFAULT_SUPABASE_KEY.trim();
+    const url = (savedCreds && typeof savedCreds.url === 'string' && savedCreds.url.trim())
+        ? savedCreds.url.trim()
+        : DEFAULT_SUPABASE_URL.trim();
+    const key = (savedCreds && typeof savedCreds.key === 'string' && savedCreds.key.trim())
+        ? savedCreds.key.trim()
+        : DEFAULT_SUPABASE_KEY.trim();
+
     sbCredentials = { url: url.replace(/\/+$/, ''), key };
 
-    if (sbCredentials.url && sbCredentials.key && window.supabase && isJwtFormat(sbCredentials.key)) {
+    if (sbCredentials.url && sbCredentials.key && window.supabase && isValidSupabaseKey(sbCredentials.key)) {
         try {
             supabaseClient = window.supabase.createClient(sbCredentials.url, sbCredentials.key);
         } catch (e) {
@@ -49,48 +54,124 @@ function initSupabaseCredentials() {
     }
 }
 
-async function supabaseRestFetch(path, options = {}) {
+// Fetch helper ke Supabase REST API dengan toleransi timeout lebih tinggi & auto-retry cerdas
+async function supabaseRestFetch(path, options = {}, retries = 2) {
     if (!sbCredentials.url || !sbCredentials.key) throw new Error('Kredensial Supabase kosong');
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
+    const timeoutMs = options.timeout || 12000; // 12 detik default agar tahan di jaringan seluler/lambat
 
     const headers = {
         'apikey': sbCredentials.key,
+        'Authorization': `Bearer ${sbCredentials.key}`,
         'Content-Type': 'application/json',
         ...(options.headers || {})
     };
-    if (isJwtFormat(sbCredentials.key)) {
-        headers['Authorization'] = `Bearer ${sbCredentials.key}`;
-    }
 
-    try {
-        const res = await fetch(`${sbCredentials.url}/rest/v1/${path}`, {
-            method: options.method || 'GET',
-            headers,
-            body: options.body ? JSON.stringify(options.body) : undefined,
-            signal: controller.signal
-        });
-        clearTimeout(timer);
+    let lastError = null;
 
-        if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`HTTP ${res.status}: ${errText.slice(0, 120)}`);
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+            const res = await fetch(`${sbCredentials.url}/rest/v1/${path}`, {
+                method: options.method || 'GET',
+                headers,
+                body: options.body ? JSON.stringify(options.body) : undefined,
+                signal: controller.signal
+            });
+            clearTimeout(timer);
+
+            if (!res.ok) {
+                const errText = await res.text();
+                // Jika error 5xx dari gateway atau server Supabase cold-start, coba lagi
+                if (res.status >= 500 && attempt < retries) {
+                    await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+                    continue;
+                }
+                throw new Error(`HTTP ${res.status}: ${errText.slice(0, 120)}`);
+            }
+
+            const text = await res.text();
+            return text ? JSON.parse(text) : null;
+        } catch (err) {
+            clearTimeout(timer);
+            lastError = err;
+            if (attempt < retries) {
+                const backoffDelay = 600 * Math.pow(2, attempt); // 600ms, 1200ms
+                await new Promise(r => setTimeout(r, backoffDelay));
+            }
         }
-        const text = await res.text();
-        return text ? JSON.parse(text) : null;
-    } catch (err) {
-        clearTimeout(timer);
-        throw err;
     }
+
+    throw lastError;
+}
+
+let autoReconnectTimer = null;
+let autoReconnectAttempts = 0;
+
+function scheduleAutoReconnect() {
+    if (isCloudConnected || autoReconnectTimer) return;
+    if (autoReconnectAttempts >= 6) {
+        // Jika sudah 6x gagal berturut-turut, jeda 1 menit sebelum mencoba lagi
+        autoReconnectTimer = setTimeout(() => {
+            autoReconnectTimer = null;
+            autoReconnectAttempts = 0;
+            scheduleAutoReconnect();
+        }, 60000);
+        return;
+    }
+
+    const intervals = [3000, 6000, 12000, 20000, 30000, 60000];
+    const delay = intervals[autoReconnectAttempts] || 15000;
+    autoReconnectAttempts++;
+
+    autoReconnectTimer = setTimeout(async () => {
+        autoReconnectTimer = null;
+        if (!isCloudConnected && (typeof navigator === 'undefined' || navigator.onLine !== false)) {
+            const ok = await syncInitialData(false);
+            if (ok) {
+                autoReconnectAttempts = 0;
+            }
+        }
+    }, delay);
+}
+
+// Otomatis sinkronkan ulang begitu koneksi internet browser pulih
+if (typeof window !== 'undefined') {
+    window.addEventListener('online', () => {
+        if (!isCloudConnected) {
+            autoReconnectAttempts = 0;
+            syncInitialData(false).catch(() => {});
+        }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !isCloudConnected) {
+            syncInitialData(false).catch(() => {});
+        }
+    });
 }
 
 async function syncInitialData(showNotification = false) {
+    if (!sbCredentials.url || !sbCredentials.key) {
+        isCloudConnected = false;
+        updateSyncStatusUI('local');
+        updateDiagnosticBox('Kredensial database Cloud belum diatur.');
+        return false;
+    }
+
     updateSyncStatusUI('syncing');
+
     try {
-        const settingsRows = await supabaseRestFetch('infaq_settings?id=eq.1&select=*');
-        if (Array.isArray(settingsRows) && settingsRows.length > 0) {
-            const s = settingsRows[0];
+        // Ambil data transaksi dan pengaturan secara paralel agar loading lebih cepat
+        const [settingsResult, txResult] = await Promise.allSettled([
+            supabaseRestFetch('infaq_settings?id=eq.1&select=*', { timeout: 10000 }),
+            supabaseRestFetch('infaq_transactions?select=*&order=tx_date.desc,id.desc', { timeout: 15000 })
+        ]);
+
+        if (settingsResult.status === 'fulfilled' && Array.isArray(settingsResult.value) && settingsResult.value.length > 0) {
+            const s = settingsResult.value[0];
             appSettings = {
                 ...appSettings,
                 orgName: s.org_name || appSettings.orgName,
@@ -101,9 +182,8 @@ async function syncInitialData(showNotification = false) {
             };
         }
 
-        const txRows = await supabaseRestFetch('infaq_transactions?select=*&order=tx_date.desc,id.desc');
-        if (Array.isArray(txRows) && txRows.length > 0) {
-            const cloudMapped = txRows.map(r => ({
+        if (txResult.status === 'fulfilled' && Array.isArray(txResult.value)) {
+            const cloudMapped = txResult.value.map(r => ({
                 id: r.id,
                 type: r.type,
                 category: r.category,
@@ -131,9 +211,12 @@ async function syncInitialData(showNotification = false) {
             deduplicateMonthlyLedgerRecords();
             ensureAllMonthlyNewsPresent();
             syncWaReportsStoreFromTransactions();
+        } else if (txResult.status === 'rejected') {
+            throw txResult.reason;
         }
 
         isCloudConnected = true;
+        autoReconnectAttempts = 0;
         saveLocalCache();
         applySettingsToUI();
         updateSyncStatusUI('cloud');
@@ -148,8 +231,13 @@ async function syncInitialData(showNotification = false) {
     } catch (err) {
         isCloudConnected = false;
         updateSyncStatusUI('local');
-        updateDiagnosticBox(`Mode Lokal Aktif (${err.name === 'AbortError' ? 'Timeout jaringan' : err.message}).`);
+        const isTimeout = err && (err.name === 'AbortError' || (err.message && err.message.toLowerCase().includes('aborted')));
+        const errDesc = isTimeout ? 'Timeout jaringan lambat' : (err.message || 'Gagal tersambung');
+        updateDiagnosticBox(`Mode Lokal Aktif (${errDesc}).`);
         if (showNotification) showToast('Berjalan dalam Mode Lokal (Cloud tidak terjangkau).', 'info');
+
+        // Jadwalkan auto-reconnect di latar belakang
+        scheduleAutoReconnect();
         return false;
     }
 }
@@ -608,14 +696,22 @@ async function pushLocalDataToCloud() {
         return;
     }
     try {
-        await supabaseRestFetch('infaq_transactions', {
-            method: 'POST',
-            body: localRows.map(({ id, ...rest }) => rest)
-        });
+        const bodyRows = localRows.map(({ id, ...rest }) => rest);
+        const chunkSize = 50;
+        for (let i = 0; i < bodyRows.length; i += chunkSize) {
+            const chunk = bodyRows.slice(i, i + chunkSize);
+            await supabaseRestFetch('infaq_transactions', {
+                method: 'POST',
+                timeout: 20000,
+                headers: { 'Prefer': 'return=representation' },
+                body: chunk
+            });
+        }
         showToast(`${localRows.length} data lokal berhasil diunggah ke Supabase!`, 'success');
         await syncInitialData(false);
     } catch (err) {
         showToast('Gagal mengunggah ke Supabase: ' + err.message, 'error');
+        throw err;
     }
 }
 

@@ -876,10 +876,15 @@ async function toggleAamiin(txId) {
     saveLocalCache();
     refreshDashboard();
 
-    if (isCloudConnected && !key.startsWith('local-')) {
+    if (sbCredentials.url && sbCredentials.key && !key.startsWith('local-')) {
         supabaseRestFetch(`infaq_transactions?id=eq.${transactions[idx].id}`, {
             method: 'PATCH',
             body: { aamiin_count: nextCount }
+        }).then(() => {
+            if (!isCloudConnected) {
+                isCloudConnected = true;
+                updateSyncStatusUI('cloud');
+            }
         }).catch(() => {});
     }
 }
@@ -1325,10 +1330,13 @@ async function handleSaveNews(e) {
         if (idx !== -1) transactions[idx] = { ...transactions[idx], ...payload };
     } else {
         transactions.unshift({ id: 'local-news-' + Date.now(), ...payload, aamiin_count: 1 });
-        if (isCloudConnected) {
+        if (sbCredentials.url && sbCredentials.key) {
             supabaseRestFetch('infaq_transactions', {
                 method: 'POST',
                 body: [{ ...payload, aamiin_count: 1 }]
+            }).then(() => {
+                isCloudConnected = true;
+                updateSyncStatusUI('cloud');
             }).catch(() => {});
         }
     }
@@ -1351,8 +1359,11 @@ function promptDeleteTransaction(id) {
         saveLocalCache();
         closeDeleteModal();
         refreshDashboard();
-        if (isCloudConnected && !target.startsWith('local-')) {
-            supabaseRestFetch(`infaq_transactions?id=eq.${target}`, { method: 'DELETE' }).catch(() => {});
+        if (sbCredentials.url && sbCredentials.key && !target.startsWith('local-')) {
+            supabaseRestFetch(`infaq_transactions?id=eq.${target}`, { method: 'DELETE' }).then(() => {
+                isCloudConnected = true;
+                updateSyncStatusUI('cloud');
+            }).catch(() => {});
         }
         showToast('Postingan berhasil dihapus.', 'info');
     };

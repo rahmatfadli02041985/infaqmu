@@ -567,22 +567,26 @@ async function saveAndPublishWaReport() {
         ? `Laporan bulan ${calc.monthName} ${calc.yearStr} berhasil disimpan ke database!`
         : `Rekap kas bulan ${calc.monthName} ${calc.yearStr} berhasil disimpan ke database.`;
 
-    if (isCloudConnected) {
+    if (sbCredentials.url && sbCredentials.key) {
         try {
             // Hapus data bulan ini terlebih dahulu dari Supabase agar tidak ada duplikasi
             await supabaseRestFetch(`infaq_transactions?tx_date=gte.${ymPrefix}-01&tx_date=lte.${ymPrefix}-31`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                timeout: 10000
             }).catch(() => {});
 
             // Kirim hanya transaksi bulan ini ke Supabase
             await supabaseRestFetch('infaq_transactions', {
                 method: 'POST',
+                timeout: 15000,
                 headers: { 'Prefer': 'return=representation' },
                 body: newRows.map(({ id, ...rest }) => rest)
             });
+            isCloudConnected = true;
+            updateSyncStatusUI('cloud');
             showToast(statusMsg, 'success');
         } catch (e) {
-            showToast('Tersimpan di database lokal (Cloud gagal dijangkau).', 'info');
+            showToast('Tersimpan di database lokal (Cloud tidak terjangkau).', 'info');
         }
     } else {
         showToast(statusMsg, 'success');
@@ -678,12 +682,14 @@ async function saveAllMonthsToDatabase() {
     refreshDashboard();
 
     // 3. Jika Cloud terhubung, unggah seluruh data lokal ke Supabase
-    if (isCloudConnected) {
+    if (sbCredentials.url && sbCredentials.key) {
         try {
             await pushLocalDataToCloud();
+            isCloudConnected = true;
+            updateSyncStatusUI('cloud');
             showToast(`Seluruh data (${allMonths.length} bulan) berhasil disimpan & disinkronkan ke Cloud!`, 'success');
         } catch (err) {
-            showToast('Seluruh data tersimpan di database lokal (Cloud gagal dijangkau).', 'info');
+            showToast('Seluruh data tersimpan di database lokal (Cloud tidak terjangkau).', 'info');
         }
     } else {
         showToast(`Seluruh data (${allMonths.length} bulan) berhasil disimpan ke database lokal!`, 'success');
