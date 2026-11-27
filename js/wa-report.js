@@ -569,27 +569,58 @@ async function saveAndPublishWaReport() {
 
     if (sbCredentials.url && sbCredentials.key) {
         try {
-            // Hapus data bulan ini terlebih dahulu dari Supabase agar tidak ada duplikasi
-            await supabaseRestFetch(`infaq_transactions?tx_date=gte.${ymPrefix}-01&tx_date=lte.${ymPrefix}-31`, {
-                method: 'DELETE',
-                timeout: 10000
-            }).catch(() => {});
+            const nextMonthDate = new Date(Number(waFormState.year), Number(waFormState.month), 1);
+            nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+            const nextMonth = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
+
+            // Hapus hanya baris kas bulan ini. Tanggal batas memakai awal bulan berikutnya,
+            // sehingga aman untuk Februari dan tidak menghapus berita kegiatan.
+            const monthFilter = `tx_date=gte.${ymPrefix}-01&tx_date=lt.${nextMonth}&type=in.(in,out)`;
+            const oldRows = await supabaseRestFetch(`infaq_transactions?${monthFilter}&select=id`, { timeout: 10000 });
+            if (!Array.isArray(oldRows)) throw new Error('Tidak dapat memastikan data lama di Supabase.');
+            if (oldRows.length > 0) {
+                const deletedRows = await supabaseRestFetch(`infaq_transactions?${monthFilter}`, {
+                    method: 'DELETE',
+                    timeout: 10000,
+                    headers: { Prefer: 'return=representation' }
+                });
+                if (!Array.isArray(deletedRows) || deletedRows.length !== oldRows.length) {
+                    throw new Error('Tidak semua transaksi lama berhasil diganti. Periksa izin baca dan hapus Supabase.');
+                }
+            }
 
             // Kirim hanya transaksi bulan ini ke Supabase
-            await supabaseRestFetch('infaq_transactions', {
+            const insertedRows = await supabaseRestFetch('infaq_transactions', {
                 method: 'POST',
                 timeout: 15000,
                 headers: { 'Prefer': 'return=representation' },
                 body: newRows.map(({ id, ...rest }) => rest)
             });
+            if (!Array.isArray(insertedRows) || insertedRows.length !== newRows.length) {
+                throw new Error('Supabase tidak mengonfirmasi seluruh transaksi baru.');
+            }
+            let reportStateError = null;
+            try {
+                await saveSharedAppState('wa_reports_data', waReportsStore);
+            } catch (err) {
+                reportStateError = err;
+            }
             isCloudConnected = true;
             updateSyncStatusUI('cloud');
-            showToast(statusMsg, 'success');
+            await syncInitialData(false);
+            if (reportStateError) {
+                showToast(`Transaksi tersimpan, tetapi rincian formulir gagal disimpan: ${reportStateError.message}`, 'error');
+            } else {
+                showToast(statusMsg, 'success');
+            }
         } catch (e) {
-            showToast('Tersimpan di database lokal (Cloud tidak terjangkau).', 'info');
+            isCloudConnected = false;
+            updateSyncStatusUI('local');
+            showToast(`Gagal menyimpan ke Supabase. Data masih tersimpan di perangkat ini: ${e.message}`, 'error');
         }
     } else {
-        showToast(statusMsg, 'success');
+        updateSyncStatusUI('local');
+        showToast('Supabase belum dikonfigurasi. Data hanya tersimpan di perangkat ini.', 'error');
     }
 }
 
@@ -689,10 +720,10 @@ async function saveAllMonthsToDatabase() {
             updateSyncStatusUI('cloud');
             showToast(`Seluruh data (${allMonths.length} bulan) berhasil disimpan & disinkronkan ke Cloud!`, 'success');
         } catch (err) {
-            showToast('Seluruh data tersimpan di database lokal (Cloud tidak terjangkau).', 'info');
+            showToast(`Gagal mengunggah seluruh data ke Supabase: ${err.message}. Salinan lokal tetap ada di perangkat ini.`, 'error');
         }
     } else {
-        showToast(`Seluruh data (${allMonths.length} bulan) berhasil disimpan ke database lokal!`, 'success');
+        showToast(`Supabase belum dikonfigurasi. Rekap ${allMonths.length} bulan hanya tersimpan di perangkat ini.`, 'error');
     }
 }
 

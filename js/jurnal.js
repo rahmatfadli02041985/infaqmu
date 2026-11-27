@@ -2337,13 +2337,16 @@ function loadJurnalKasState() {
     jurnalKasState = JSON.parse(JSON.stringify(INITIAL_JURNAL_KAS));
 }
 
-function saveJurnalKasState() {
+function saveJurnalKasState(skipCloud = false) {
     try {
         const key = (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.JURNAL_KAS)
             ? STORAGE_KEYS.JURNAL_KAS
             : 'infaqmu_jurnal_kas_v1';
         localStorage.setItem(key, JSON.stringify(jurnalKasState));
     } catch (e) {}
+    if (!skipCloud && typeof queueSharedAppStateSave === 'function') {
+        queueSharedAppStateSave('jurnal_kas_data', jurnalKasState);
+    }
 }
 
 function resetJurnalKasToDefault() {

@@ -36,6 +36,7 @@ function sanitizeSupabaseUrl(rawUrl) {
 }
 
 function initSupabaseCredentials() {
+    stopSupabaseRealtime();
     let savedCreds = null;
     try {
         const raw = localStorage.getItem(STORAGE_KEYS.SB_CONFIG);
@@ -117,6 +118,96 @@ async function supabaseRestFetch(path, options = {}, retries = 2) {
 
 let autoReconnectTimer = null;
 let autoReconnectAttempts = 0;
+let supabaseRealtimeChannel = null;
+let realtimeRefreshTimer = null;
+let realtimeFallbackTimer = null;
+let sharedStateSaveQueue = Promise.resolve();
+
+async function saveSharedAppState(column, value) {
+    if (!sbCredentials.url || !sbCredentials.key) {
+        updateDiagnosticBox('Belum ada koneksi Cloud; perubahan hanya tersimpan di perangkat ini.');
+        return false;
+    }
+
+    const updated = await supabaseRestFetch('infaq_settings?id=eq.1', {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: { [column]: value }
+    });
+    if (!Array.isArray(updated) || updated.length === 0) {
+        throw new Error('Pengaturan Cloud tidak ditemukan atau akses tulis ditolak.');
+    }
+    return true;
+}
+
+function queueSharedAppStateSave(column, value) {
+    let snapshot;
+    try {
+        snapshot = JSON.parse(JSON.stringify(value));
+    } catch (err) {
+        showToast(`Data tidak dapat disiapkan untuk Cloud: ${err.message}`, 'error');
+        return;
+    }
+    sharedStateSaveQueue = sharedStateSaveQueue
+        .catch(() => {})
+        .then(() => saveSharedAppState(column, snapshot))
+        .catch((err) => {
+            updateDiagnosticBox(`Gagal menyimpan data bersama ke Cloud: ${err.message}`);
+            showToast(`Gagal menyimpan ke Supabase: ${err.message}`, 'error');
+        });
+}
+
+function stopSupabaseRealtime() {
+    if (realtimeRefreshTimer) {
+        clearTimeout(realtimeRefreshTimer);
+        realtimeRefreshTimer = null;
+    }
+    if (realtimeFallbackTimer) {
+        clearInterval(realtimeFallbackTimer);
+        realtimeFallbackTimer = null;
+    }
+    if (supabaseClient && supabaseRealtimeChannel) {
+        supabaseClient.removeChannel(supabaseRealtimeChannel).catch(() => {});
+    }
+    supabaseRealtimeChannel = null;
+}
+
+function startSupabaseRealtime() {
+    if (!supabaseClient) {
+        updateDiagnosticBox('REST terhubung, tetapi klien Realtime Supabase tidak tersedia.');
+        return;
+    }
+    if (supabaseRealtimeChannel) return;
+
+    const refreshFromCloud = () => {
+        if (realtimeRefreshTimer) clearTimeout(realtimeRefreshTimer);
+        realtimeRefreshTimer = setTimeout(() => {
+            realtimeRefreshTimer = null;
+            syncInitialData(false);
+        }, 250);
+    };
+
+    supabaseRealtimeChannel = supabaseClient
+        .channel('infaqmu-live-data')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'infaq_transactions' }, refreshFromCloud)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'infaq_settings' }, refreshFromCloud)
+        .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                if (realtimeFallbackTimer) {
+                    clearInterval(realtimeFallbackTimer);
+                    realtimeFallbackTimer = null;
+                }
+                updateDiagnosticBox('Cloud terhubung; pembaruan langsung aktif.');
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                updateDiagnosticBox('Cloud tersambung, tetapi Realtime gagal. Periksa publikasi Realtime Supabase.');
+                if (!realtimeFallbackTimer) {
+                    realtimeFallbackTimer = setInterval(() => {
+                        if (typeof navigator === 'undefined' || navigator.onLine !== false) syncInitialData(false);
+                    }, 30000);
+                }
+            }
+        });
+}
 
 function scheduleAutoReconnect() {
     if (isCloudConnected || autoReconnectTimer) return;
@@ -188,6 +279,21 @@ async function syncInitialData(showNotification = false) {
                 viewerPin: String(s.visitor_pin || appSettings.viewerPin),
                 adminPin: String(s.admin_pin || appSettings.adminPin)
             };
+            if (s.show_feed_for_viewer != null) appSettings.showFeedForViewer = Boolean(s.show_feed_for_viewer);
+            if (s.show_quick_login != null) appSettings.showQuickLogin = Boolean(s.show_quick_login);
+            if (s.wa_reports_data && typeof s.wa_reports_data === 'object') {
+                waReportsStore = { ...getDefaultWaReports(), ...s.wa_reports_data };
+            }
+            if (s.takziah_data && typeof s.takziah_data === 'object' && Array.isArray(s.takziah_data.members)) {
+                takziahState = s.takziah_data;
+                saveTakziahState(true);
+                if (currentMainView === 'takziah') renderTakziahView();
+            }
+            if (Array.isArray(s.jurnal_kas_data) && s.jurnal_kas_data.length > 0) {
+                jurnalKasState = s.jurnal_kas_data;
+                if (typeof saveJurnalKasState === 'function') saveJurnalKasState(true);
+                if (currentMainView === 'jurnal') renderJurnalView();
+            }
         }
 
         if (txResult.status === 'fulfilled' && Array.isArray(txResult.value)) {
@@ -200,6 +306,7 @@ async function syncInitialData(showNotification = false) {
                 amount: Number(r.amount) || 0,
                 tx_date: r.tx_date,
                 theme: r.theme || 'emerald',
+                image: r.image || null,
                 aamiin_count: Number(r.aamiin_count) || 0
             }));
             const cloudSignatures = new Set(
@@ -229,6 +336,7 @@ async function syncInitialData(showNotification = false) {
         applySettingsToUI();
         updateSyncStatusUI('cloud');
         updateDiagnosticBox('Terhubung ke Supabase Cloud.');
+        startSupabaseRealtime();
 
         if (currentRole) {
             populateYearFilter();
@@ -707,25 +815,31 @@ async function testAndSyncSupabase() {
 }
 
 async function pushLocalDataToCloud() {
-    const localRows = transactions.filter(t => String(t.id).startsWith('local-'));
-    if (localRows.length === 0) {
-        showToast('Semua data sudah tersinkron di Cloud.', 'info');
+    if (currentRole !== 'admin') {
+        showToast('Hanya admin yang dapat mengunggah data ke Cloud.', 'error');
         return;
     }
+    const localRows = transactions.filter(t => String(t.id).startsWith('local-'));
     try {
         const bodyRows = localRows.map(({ id, ...rest }) => rest);
         const chunkSize = 50;
         for (let i = 0; i < bodyRows.length; i += chunkSize) {
             const chunk = bodyRows.slice(i, i + chunkSize);
-            await supabaseRestFetch('infaq_transactions', {
+            const uploaded = await supabaseRestFetch('infaq_transactions', {
                 method: 'POST',
                 timeout: 20000,
                 headers: { 'Prefer': 'return=representation' },
                 body: chunk
             });
+            if (!Array.isArray(uploaded) || uploaded.length !== chunk.length) {
+                throw new Error(`Supabase tidak mengonfirmasi unggahan transaksi ${i + 1}–${i + chunk.length}.`);
+            }
         }
-        showToast(`${localRows.length} data lokal berhasil diunggah ke Supabase!`, 'success');
+        await saveSharedAppState('wa_reports_data', waReportsStore);
+        await saveSharedAppState('takziah_data', takziahState);
+        await saveSharedAppState('jurnal_kas_data', jurnalKasState);
         await syncInitialData(false);
+        showToast(`${localRows.length} transaksi dan data modul berhasil diunggah ke Supabase.`, 'success');
     } catch (err) {
         showToast('Gagal mengunggah ke Supabase: ' + err.message, 'error');
         throw err;

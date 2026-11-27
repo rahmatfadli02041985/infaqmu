@@ -934,6 +934,12 @@
                             <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7zm0 5c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3"/></svg>
                             <span>Unduh SQL (.sql)</span>
                         </button>
+                        <button type="button" onclick="openRestoreBackupPicker()" class="col-span-2 py-2.5 px-2.5 rounded-xl bg-sky-700 hover:bg-sky-800 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <span>Restore Database dari Backup JSON</span>
+                        </button>
+                        <input type="file" id="restore-backup-file" accept=".json,application/json" class="hidden" onchange="handleRestoreBackupFile(event)">
+                        <p class="col-span-2 text-[10px] text-slate-500 text-center">Restore JSON akan mengganti seluruh data di Supabase dan perangkat ini.</p>
                     </div>
                 </div>
 
@@ -1059,11 +1065,11 @@
     </div>
 
     <!-- SKRIP APLIKASI TERMODULARISASI -->
-    <script src="js/config.js?v=20261125c"></script>
-    <script src="js/ledger.js?v=20261125c"></script>
-    <script src="js/wa-report.js?v=20261125c"></script>
-    <script src="js/takziah.js?v=20261125c"></script>
-    <script src="js/jurnal.js?v=20261125c"></script>
-    <script src="js/app.js?v=20261125c"></script>
+    <script src="js/config.js?v=20261127c"></script>
+    <script src="js/ledger.js?v=20261127c"></script>
+    <script src="js/wa-report.js?v=20261127c"></script>
+    <script src="js/takziah.js?v=20261127c"></script>
+    <script src="js/jurnal.js?v=20261127c"></script>
+    <script src="js/app.js?v=20261127c"></script>
 </body>
 </html>

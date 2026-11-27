@@ -68,11 +68,14 @@ function loadTakziahState() {
     } catch (e) {}
 }
 
-function saveTakziahState() {
+function saveTakziahState(skipCloud = false) {
     try {
         const key = (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.TAKZIAH) ? STORAGE_KEYS.TAKZIAH : 'infaqmu_takziah_data_v3';
         localStorage.setItem(key, JSON.stringify(takziahState));
     } catch (e) {}
+    if (!skipCloud && typeof queueSharedAppStateSave === 'function') {
+        queueSharedAppStateSave('takziah_data', takziahState);
+    }
 }
 
 function ensureTakziahMenuAndViewMounted() {

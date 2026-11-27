@@ -887,15 +887,24 @@ async function toggleAamiin(txId) {
     refreshDashboard();
 
     if (sbCredentials.url && sbCredentials.key && !key.startsWith('local-')) {
-        supabaseRestFetch(`infaq_transactions?id=eq.${transactions[idx].id}`, {
-            method: 'PATCH',
-            body: { aamiin_count: nextCount }
-        }).then(() => {
-            if (!isCloudConnected) {
-                isCloudConnected = true;
-                updateSyncStatusUI('cloud');
+        try {
+            const updated = await supabaseRestFetch(`infaq_transactions?id=eq.${encodeURIComponent(key)}`, {
+                method: 'PATCH',
+                headers: { Prefer: 'return=representation' },
+                body: { aamiin_count: nextCount }
+            });
+            if (!Array.isArray(updated) || updated.length === 0) {
+                throw new Error('Transaksi tidak ditemukan atau akses tulis ditolak.');
             }
-        }).catch(() => {});
+        } catch (err) {
+            if (liked) likedTxIds.add(key);
+            else likedTxIds.delete(key);
+            transactions[idx].aamiin_count = liked ? nextCount + 1 : Math.max(0, nextCount - 1);
+            try { localStorage.setItem(STORAGE_KEYS.LIKED_IDS, JSON.stringify(Array.from(likedTxIds))); } catch (e) {}
+            saveLocalCache();
+            refreshDashboard();
+            showToast(`Perubahan Aamiin gagal disimpan ke Supabase: ${err.message}`, 'error');
+        }
     }
 }
 
@@ -1335,26 +1344,55 @@ async function handleSaveNews(e) {
         amount: 0
     };
 
-    if (id) {
-        const idx = transactions.findIndex(t => String(t.id) === String(id));
-        if (idx !== -1) transactions[idx] = { ...transactions[idx], ...payload };
-    } else {
-        transactions.unshift({ id: 'local-news-' + Date.now(), ...payload, aamiin_count: 1 });
-        if (sbCredentials.url && sbCredentials.key) {
-            supabaseRestFetch('infaq_transactions', {
-                method: 'POST',
-                body: [{ ...payload, aamiin_count: 1 }]
-            }).then(() => {
-                isCloudConnected = true;
-                updateSyncStatusUI('cloud');
-            }).catch(() => {});
+    const oldRow = id ? transactions.find(t => String(t.id) === String(id)) : null;
+    const isCloudRow = Boolean(oldRow && !String(oldRow.id).startsWith('local-'));
+    let savedId = id || `local-news-${Date.now()}`;
+
+    if (sbCredentials.url && sbCredentials.key) {
+        try {
+            if (isCloudRow) {
+                const updated = await supabaseRestFetch(`infaq_transactions?id=eq.${encodeURIComponent(id)}`, {
+                    method: 'PATCH',
+                    headers: { Prefer: 'return=representation' },
+                    body: payload
+                });
+                if (!Array.isArray(updated) || updated.length === 0) {
+                    throw new Error('Berita tidak ditemukan di Cloud atau akses tulis ditolak.');
+                }
+            } else {
+                const inserted = await supabaseRestFetch('infaq_transactions', {
+                    method: 'POST',
+                    headers: { Prefer: 'return=representation' },
+                    body: [{ ...payload, aamiin_count: oldRow?.aamiin_count || 1 }]
+                });
+                if (!Array.isArray(inserted) || inserted.length === 0) {
+                    throw new Error('Supabase tidak mengonfirmasi penyimpanan berita.');
+                }
+                if (inserted[0]?.id != null) savedId = inserted[0].id;
+            }
+        } catch (err) {
+            showToast(`Berita gagal disimpan ke Supabase: ${err.message}`, 'error');
+            return;
         }
+    }
+
+    const savedRow = { ...(oldRow || {}), id: savedId, ...payload, aamiin_count: oldRow?.aamiin_count || 1 };
+    if (oldRow) {
+        const idx = transactions.findIndex(t => String(t.id) === String(id));
+        if (idx !== -1) transactions[idx] = savedRow;
+    } else {
+        transactions.unshift(savedRow);
     }
 
     saveLocalCache();
     closeNewsModal();
     refreshDashboard();
-    showToast(id ? 'Berita kegiatan berhasil diperbarui!' : 'Berita kegiatan berhasil diterbitkan!', 'success');
+    if (sbCredentials.url && sbCredentials.key) {
+        await syncInitialData(false);
+        showToast(id ? 'Berita berhasil diperbarui dan disimpan ke Supabase.' : 'Berita berhasil diterbitkan ke Supabase.', 'success');
+    } else {
+        showToast('Supabase belum dikonfigurasi. Berita hanya tersimpan di perangkat ini.', 'error');
+    }
 }
 
 function promptDeleteTransaction(id) {
@@ -1363,19 +1401,32 @@ function promptDeleteTransaction(id) {
     document.getElementById('delete-modal').classList.remove('hidden');
     document.getElementById('delete-modal').classList.add('flex');
 
-    document.getElementById('confirm-delete-btn').onclick = () => {
+    document.getElementById('confirm-delete-btn').onclick = async () => {
         const target = String(pendingDeleteId);
+        if (sbCredentials.url && sbCredentials.key && !target.startsWith('local-')) {
+            try {
+                const deleted = await supabaseRestFetch(`infaq_transactions?id=eq.${encodeURIComponent(target)}`, {
+                    method: 'DELETE',
+                    headers: { Prefer: 'return=representation' }
+                });
+                if (!Array.isArray(deleted) || deleted.length === 0) {
+                    throw new Error('Data tidak ditemukan di Cloud atau akses hapus ditolak.');
+                }
+            } catch (err) {
+                showToast(`Gagal menghapus data di Supabase: ${err.message}`, 'error');
+                return;
+            }
+        }
         transactions = transactions.filter(t => String(t.id) !== target);
         saveLocalCache();
         closeDeleteModal();
         refreshDashboard();
-        if (sbCredentials.url && sbCredentials.key && !target.startsWith('local-')) {
-            supabaseRestFetch(`infaq_transactions?id=eq.${target}`, { method: 'DELETE' }).then(() => {
-                isCloudConnected = true;
-                updateSyncStatusUI('cloud');
-            }).catch(() => {});
+        if (sbCredentials.url && sbCredentials.key) {
+            await syncInitialData(false);
+            showToast('Postingan berhasil dihapus dari Supabase.', 'success');
+        } else {
+            showToast('Supabase belum dikonfigurasi. Penghapusan hanya berlaku di perangkat ini.', 'error');
         }
-        showToast('Postingan berhasil dihapus.', 'info');
     };
 }
 
@@ -1426,8 +1477,14 @@ async function handleSaveSecuritySettings(e) {
     };
     document.getElementById('set-sb-url').value = cleanedUrl;
     localStorage.setItem(STORAGE_KEYS.SB_CONFIG, JSON.stringify(sbCredentials));
+    initSupabaseCredentials();
 
-    appSettings = {
+    if (!sbCredentials.url || !sbCredentials.key) {
+        showToast('URL dan kunci Supabase wajib diisi agar pengaturan tersimpan ke Cloud.', 'error');
+        return;
+    }
+
+    const newSettings = {
         orgName: document.getElementById('set-org-name').value.trim(),
         orgHandle: document.getElementById('set-org-handle').value.trim().replace(/^@/, ''),
         orgBio: document.getElementById('set-org-bio').value.trim(),
@@ -1437,10 +1494,36 @@ async function handleSaveSecuritySettings(e) {
         showQuickLogin: document.getElementById('set-show-quick-login') ? document.getElementById('set-show-quick-login').checked : true
     };
 
-    saveLocalCache();
-    applySettingsToUI();
-    closeSecurityModal();
-    showToast('Pengaturan berhasil disimpan!', 'success');
+    try {
+        const savedSettings = await supabaseRestFetch('infaq_settings?on_conflict=id', {
+            method: 'POST',
+            headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+            body: [{
+                id: 1,
+                org_name: newSettings.orgName,
+                org_handle: newSettings.orgHandle,
+                org_bio: newSettings.orgBio,
+                visitor_pin: newSettings.viewerPin,
+                admin_pin: newSettings.adminPin,
+                show_feed_for_viewer: newSettings.showFeedForViewer,
+                show_quick_login: newSettings.showQuickLogin,
+                wa_reports_data: waReportsStore,
+                takziah_data: takziahState,
+                jurnal_kas_data: jurnalKasState
+            }]
+        });
+        if (!Array.isArray(savedSettings) || savedSettings.length === 0) {
+            throw new Error('Pengaturan Cloud tidak ditemukan atau akses tulis ditolak.');
+        }
+        appSettings = newSettings;
+        saveLocalCache();
+        applySettingsToUI();
+        closeSecurityModal();
+        await syncInitialData(false);
+        showToast('Pengaturan berhasil disimpan ke Supabase.', 'success');
+    } catch (err) {
+        showToast(`Pengaturan gagal disimpan ke Supabase: ${err.message}`, 'error');
+    }
 }
 
 function resetDemoData() {
@@ -1544,6 +1627,229 @@ function backupDatabaseToLocalDrive(format = 'json') {
     const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
     triggerDownload(blob, `Backup_Database_InfaqMU_${dateFormatted}_${timestamp}.json`);
     showToast('File backup JSON berhasil disimpan ke drive lokal!', 'success');
+}
+
+function openRestoreBackupPicker() {
+    if (currentRole !== 'admin') {
+        showToast('Hanya admin yang dapat memulihkan database.', 'error');
+        return;
+    }
+    const picker = document.getElementById('restore-backup-file');
+    if (picker) {
+        picker.value = '';
+        picker.click();
+    }
+}
+
+function getRestoreTransactions(rows) {
+    const allowedFields = ['type', 'category', 'title', 'description', 'amount', 'tx_date', 'theme', 'aamiin_count', 'image'];
+    return rows.map((row, index) => {
+        if (!row || typeof row !== 'object' || !row.type || !row.title || !row.tx_date) {
+            throw new Error(`Transaksi pada urutan ${index + 1} tidak memiliki data wajib.`);
+        }
+        const clean = {};
+        allowedFields.forEach((field) => {
+            if (row[field] !== undefined) clean[field] = row[field];
+        });
+        clean.amount = Number(clean.amount) || 0;
+        clean.aamiin_count = Number(clean.aamiin_count) || 0;
+        return clean;
+    });
+}
+
+async function replaceSupabaseDataFromBackup(backupData, settings) {
+    if (!sbCredentials.url || !sbCredentials.key) {
+        throw new Error('Koneksi Supabase belum dikonfigurasi. Restore database membutuhkan koneksi Cloud.');
+    }
+
+    // Pastikan migrasi kolom modul sudah diterapkan sebelum menyentuh data transaksi.
+    await supabaseRestFetch(
+        'infaq_settings?select=id,show_feed_for_viewer,show_quick_login,wa_reports_data,takziah_data,jurnal_kas_data&limit=0',
+        { timeout: 10000 },
+        0
+    );
+
+    // Ambil salinan Cloud saat ini agar bisa dipulihkan jika proses restore gagal di tengah jalan.
+    const [previousRows, previousSettings] = await Promise.all([
+        supabaseRestFetch('infaq_transactions?select=*', { timeout: 20000 }),
+        supabaseRestFetch('infaq_settings?id=eq.1&select=*', { timeout: 10000 })
+    ]);
+    if (!Array.isArray(previousRows) || !Array.isArray(previousSettings)) {
+        throw new Error('Tidak dapat membaca cadangan Cloud saat ini. Pastikan izin baca Supabase tersedia.');
+    }
+
+    const newRows = getRestoreTransactions(backupData.transactions);
+    const settingsRow = {
+        id: 1,
+        org_name: settings.orgName,
+        org_handle: settings.orgHandle,
+        org_bio: settings.orgBio,
+        visitor_pin: settings.viewerPin,
+        admin_pin: settings.adminPin,
+        show_feed_for_viewer: settings.showFeedForViewer === true,
+        show_quick_login: settings.showQuickLogin !== false,
+        wa_reports_data: backupData.waReportsStore,
+        takziah_data: backupData.takziah,
+        jurnal_kas_data: backupData.jurnalKas
+    };
+
+    let cloudChanged = false;
+    try {
+        if (previousRows.length > 0) {
+            const removed = await supabaseRestFetch('infaq_transactions?id=not.is.null&select=id', {
+                method: 'DELETE',
+                timeout: 20000,
+                headers: { Prefer: 'return=representation' }
+            }, 0);
+            if (Array.isArray(removed) && removed.length > 0) cloudChanged = true;
+            if (!Array.isArray(removed) || removed.length !== previousRows.length) {
+                throw new Error('Penghapusan data lama tidak lengkap. Restore dibatalkan; periksa izin Supabase.');
+            }
+        }
+
+        for (let i = 0; i < newRows.length; i += 50) {
+            const chunk = newRows.slice(i, i + 50);
+            const inserted = await supabaseRestFetch('infaq_transactions', {
+                method: 'POST',
+                timeout: 20000,
+                headers: { Prefer: 'return=representation' },
+                body: chunk
+            }, 0);
+            if (!Array.isArray(inserted) || inserted.length !== chunk.length) {
+                if (Array.isArray(inserted) && inserted.length > 0) cloudChanged = true;
+                throw new Error(`Supabase tidak mengonfirmasi seluruh data restore (baris ${i + 1}–${i + chunk.length}).`);
+            }
+            cloudChanged = true;
+        }
+
+        const savedSettings = await supabaseRestFetch('infaq_settings?on_conflict=id', {
+            method: 'POST',
+            timeout: 20000,
+            headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+            body: [settingsRow]
+        });
+        if (!Array.isArray(savedSettings) || savedSettings.length === 0) {
+            throw new Error('Supabase tidak mengonfirmasi pemulihan pengaturan dan data modul.');
+        }
+        cloudChanged = true;
+    } catch (err) {
+        if (cloudChanged) {
+            try {
+                const currentRows = await supabaseRestFetch('infaq_transactions?select=id', { timeout: 20000 }, 0);
+                if (!Array.isArray(currentRows)) throw new Error('Tidak dapat membaca data saat rollback.');
+                if (currentRows.length > 0) {
+                    const removed = await supabaseRestFetch('infaq_transactions?id=not.is.null&select=id', {
+                        method: 'DELETE',
+                        timeout: 20000,
+                        headers: { Prefer: 'return=representation' }
+                    }, 0);
+                    if (!Array.isArray(removed) || removed.length !== currentRows.length) {
+                        throw new Error('Data hasil restore tidak dapat dibersihkan seluruhnya.');
+                    }
+                }
+                for (let i = 0; i < previousRows.length; i += 50) {
+                    const chunk = getRestoreTransactions(previousRows.slice(i, i + 50));
+                    if (chunk.length) {
+                        await supabaseRestFetch('infaq_transactions', {
+                            method: 'POST',
+                            headers: { Prefer: 'return=representation' },
+                            body: chunk
+                        }, 0);
+                    }
+                }
+                if (previousSettings.length > 0) {
+                    const old = previousSettings[0];
+                    await supabaseRestFetch('infaq_settings?id=eq.1', {
+                        method: 'PATCH',
+                        headers: { Prefer: 'return=minimal' },
+                        body: old
+                    }, 0);
+                } else {
+                    await supabaseRestFetch('infaq_settings?id=eq.1', { method: 'DELETE' }, 0);
+                }
+            } catch (rollbackError) {
+                throw new Error(`${err.message} Pemulihan otomatis data sebelumnya juga gagal: ${rollbackError.message}`);
+            }
+        }
+        throw err;
+    }
+}
+
+async function handleRestoreBackupFile(event) {
+    const picker = event.target;
+    const file = picker?.files?.[0];
+    if (!file) return;
+    if (currentRole !== 'admin') {
+        showToast('Hanya admin yang dapat memulihkan database.', 'error');
+        return;
+    }
+
+    try {
+        if (file.size > 50 * 1024 * 1024) throw new Error('Ukuran file backup melebihi batas 50 MB.');
+        const backup = JSON.parse(await file.text());
+        const data = backup?.data;
+        if (backup?.app !== 'InfaqMU' || !data || !data.settings || !Array.isArray(data.transactions)) {
+            throw new Error('Format file tidak dikenali. Pilih file backup JSON InfaqMU.');
+        }
+        if (!data.waReportsStore || typeof data.waReportsStore !== 'object' || Array.isArray(data.waReportsStore)) {
+            throw new Error('Data rekap laporan tidak ditemukan di dalam file backup.');
+        }
+        if (!data.takziah || !Array.isArray(data.takziah.members) || !Array.isArray(data.takziah.events)) {
+            throw new Error('Data Iuran Takziah tidak lengkap di dalam file backup.');
+        }
+        if (!Array.isArray(data.jurnalKas)) throw new Error('Data Jurnal Kas tidak ditemukan di dalam file backup.');
+
+        const confirm = await showInAppDialog({
+            title: 'Pulihkan Database?',
+            message: `File berisi ${data.transactions.length} transaksi, ${data.takziah.members.length} anggota Takziah, dan ${data.jurnalKas.length} baris Jurnal Kas. Semua data Cloud saat ini akan diganti dengan isi backup. Lanjutkan?`,
+            confirmText: 'Pulihkan Database',
+            cancelText: 'Batal'
+        });
+        if (!confirm) return;
+
+        const restoredSettings = {
+            ...appSettings,
+            ...data.settings,
+            orgName: String(data.settings.orgName || appSettings.orgName),
+            orgHandle: String(data.settings.orgHandle || appSettings.orgHandle).replace(/^@/, ''),
+            orgBio: String(data.settings.orgBio || appSettings.orgBio),
+            viewerPin: String(data.settings.viewerPin || appSettings.viewerPin),
+            adminPin: String(data.settings.adminPin || appSettings.adminPin)
+        };
+        if (!/^\d{6}$/.test(restoredSettings.viewerPin) || !/^\d{6}$/.test(restoredSettings.adminPin)) {
+            throw new Error('PIN pada file backup tidak valid; harus terdiri dari 6 angka.');
+        }
+
+        showToast('Memulihkan data ke Supabase. Mohon tunggu…', 'info');
+        await replaceSupabaseDataFromBackup(data, restoredSettings);
+
+        appSettings = restoredSettings;
+        transactions = data.transactions;
+        waReportsStore = { ...getDefaultWaReports(), ...data.waReportsStore };
+        takziahState = data.takziah;
+        jurnalKasState = data.jurnalKas;
+        saveLocalCache();
+        saveTakziahState(true);
+        saveJurnalKasState(true);
+        applySettingsToUI();
+        deduplicateMonthlyLedgerRecords();
+        populateYearFilter();
+        refreshDashboard();
+        if (currentMainView === 'takziah') renderTakziahView();
+        if (currentMainView === 'jurnal') renderJurnalView();
+        await syncInitialData(false);
+        logAdminActivity('Restore Database', `Memulihkan ${transactions.length} transaksi dari file ${file.name}`);
+        showToast('Restore database berhasil. Data Cloud dan perangkat ini sudah diperbarui.', 'success');
+    } catch (err) {
+        const message = err?.message || 'Terjadi kesalahan yang tidak diketahui.';
+        if (/PGRST204|schema cache|could not find the .*column/i.test(message)) {
+            showToast('Kolom database belum diperbarui. Jalankan supabase/realtime.sql di Supabase SQL Editor, lalu coba restore lagi.', 'error');
+        } else {
+            showToast(`Restore database gagal: ${message}`, 'error');
+        }
+    } finally {
+        if (picker) picker.value = '';
+    }
 }
 
 function escapeSql(str) {
