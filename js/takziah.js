@@ -4,6 +4,7 @@
 
 let takziahState = {
     nominalPerMusibah: 10000,
+    paymentTransactions: [],
     events: [
         { id: 'ev-1', label: 'Iuran Musibah #1', date: 'Musibah #1', note: '' },
         { id: 'ev-2', label: 'Iuran Musibah #2', date: 'Musibah #2', note: '' },
@@ -63,6 +64,8 @@ function loadTakziahState() {
             const parsed = JSON.parse(raw);
             if (parsed && Array.isArray(parsed.events) && Array.isArray(parsed.members)) {
                 takziahState = parsed;
+                if (!Array.isArray(takziahState.paymentTransactions)) takziahState.paymentTransactions = [];
+                else takziahState.paymentTransactions = takziahState.paymentTransactions.filter(tx => tx && Array.isArray(tx.eventIds));
             }
         }
     } catch (e) {}
@@ -221,16 +224,26 @@ function handleTakziahBatchPayment(e) {
         return;
     }
 
-    const journalChanges = [];
+    const paidEvents = [];
     for (let i = 0; i < slotsNeeded; i++) {
         const targetEv = unpaidEvents[i];
         member.payments[targetEv.id] = nominal;
         member.paymentDates[targetEv.id] = payDate;
-        journalChanges.push({ member, event: targetEv, amount: nominal, date: payDate });
+        paidEvents.push(targetEv);
     }
 
+    const paymentTransaction = {
+        id: `tp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        memberId: member.id,
+        eventIds: paidEvents.map(ev => ev.id),
+        amount: rawAmount,
+        date: payDate
+    };
+    if (!Array.isArray(takziahState.paymentTransactions)) takziahState.paymentTransactions = [];
+    takziahState.paymentTransactions.push(paymentTransaction);
+
     const prevScrollLeft = document.getElementById('takziah-bottom-table-scroll')?.scrollLeft || 0;
-    if (typeof syncTakziahPaymentsToJournal === 'function') syncTakziahPaymentsToJournal(journalChanges);
+    if (typeof syncTakziahPaymentsToJournal === 'function') syncTakziahPaymentsToJournal([{ transaction: paymentTransaction, member, events: paidEvents, createIfMissing: true }]);
     saveTakziahState();
     renderTakziahView();
 
@@ -544,7 +557,15 @@ async function toggleTakziahPayment(memberId, eventId) {
     member.payments[eventId] = 0;
     delete member.paymentDates[eventId];
 
-    if (typeof syncTakziahPaymentsToJournal === 'function') syncTakziahPaymentsToJournal([{ member, event: evObj || { id: eventId }, amount: 0 }]);
+    const relatedTransactions = (takziahState.paymentTransactions || []).filter(tx => tx.memberId === memberId && (tx.eventIds || []).includes(eventId));
+    const journalChanges = relatedTransactions.map(transaction => {
+        transaction.eventIds = transaction.eventIds.filter(id => id !== eventId);
+        transaction.amount = transaction.eventIds.reduce((sum, id) => sum + Number(member.payments[id] || 0), 0);
+        return { transaction, member, events: takziahState.events.filter(ev => transaction.eventIds.includes(ev.id)), remove: transaction.eventIds.length === 0 };
+    });
+    takziahState.paymentTransactions = (takziahState.paymentTransactions || []).filter(tx => (tx.eventIds || []).length > 0);
+    journalChanges.push({ legacyMemberId: memberId, legacyEventIds: [eventId] });
+    if (typeof syncTakziahPaymentsToJournal === 'function') syncTakziahPaymentsToJournal(journalChanges);
     saveTakziahState();
     renderTakziahView();
 
@@ -590,8 +611,8 @@ async function editTakziahMember(memberId) {
     if (newName && newName.trim()) {
         member.name = newName.trim();
         if (typeof syncTakziahPaymentsToJournal === 'function') {
-            syncTakziahPaymentsToJournal((takziahState.events || []).filter(ev => Number(member.payments?.[ev.id] || 0) > 0).map(ev => ({
-                member, event: ev, amount: Number(member.payments[ev.id]), date: member.paymentDates?.[ev.id], updateOnly: true
+            syncTakziahPaymentsToJournal((takziahState.paymentTransactions || []).filter(tx => tx.memberId === memberId).map(transaction => ({
+                transaction, member, events: takziahState.events.filter(ev => transaction.eventIds.includes(ev.id))
             })));
         }
         saveTakziahState();
@@ -611,8 +632,12 @@ async function deleteTakziahMember(memberId) {
     });
     if (!ok) return;
     if (typeof syncTakziahPaymentsToJournal === 'function') {
-        syncTakziahPaymentsToJournal((takziahState.events || []).map(ev => ({ member, event: ev, amount: 0 })));
+        syncTakziahPaymentsToJournal([
+            ...(takziahState.paymentTransactions || []).filter(tx => tx.memberId === memberId).map(transaction => ({ transaction, remove: true })),
+            { legacyMemberId: memberId, legacyEventIds: (takziahState.events || []).map(ev => ev.id) }
+        ]);
     }
+    takziahState.paymentTransactions = (takziahState.paymentTransactions || []).filter(tx => tx.memberId !== memberId);
     takziahState.members = takziahState.members.filter(m => m.id !== memberId);
     saveTakziahState();
     renderTakziahView();
@@ -667,8 +692,9 @@ async function editTakziahEvent(eventId) {
     ev.label = newLabel.trim();
     ev.date = newDate.trim();
     if (typeof syncTakziahPaymentsToJournal === 'function') {
-        syncTakziahPaymentsToJournal(takziahState.members.filter(m => Number(m.payments?.[eventId] || 0) > 0).map(member => ({
-            member, event: ev, amount: Number(member.payments[eventId]), date: member.paymentDates?.[eventId], updateOnly: true
+        syncTakziahPaymentsToJournal((takziahState.paymentTransactions || []).filter(tx => (tx.eventIds || []).includes(eventId)).map(transaction => ({
+            transaction, member: takziahState.members.find(m => m.id === transaction.memberId),
+            events: takziahState.events.filter(item => transaction.eventIds.includes(item.id))
         })));
     }
     saveTakziahState();
@@ -687,9 +713,16 @@ async function deleteTakziahEvent(eventId) {
     });
     if (!ok) return;
 
-    if (typeof syncTakziahPaymentsToJournal === 'function') {
-        syncTakziahPaymentsToJournal(takziahState.members.map(member => ({ member, event: ev, amount: 0 })));
-    }
+    const transactionChanges = [];
+    (takziahState.paymentTransactions || []).filter(tx => (tx.eventIds || []).includes(eventId)).forEach(transaction => {
+        const member = takziahState.members.find(m => m.id === transaction.memberId);
+        transaction.eventIds = transaction.eventIds.filter(id => id !== eventId);
+        transaction.amount = member ? transaction.eventIds.reduce((sum, id) => sum + Number(member.payments?.[id] || 0), 0) : 0;
+        transactionChanges.push({ transaction, member, events: takziahState.events.filter(item => transaction.eventIds.includes(item.id)), remove: !member || !transaction.eventIds.length });
+    });
+    takziahState.paymentTransactions = (takziahState.paymentTransactions || []).filter(tx => (tx.eventIds || []).length > 0);
+    transactionChanges.push({ legacyEventIds: [eventId] });
+    if (typeof syncTakziahPaymentsToJournal === 'function') syncTakziahPaymentsToJournal(transactionChanges);
     takziahState.events = takziahState.events.filter(x => x.id !== eventId);
     takziahState.events.forEach((item, idx) => {
         if (/^Iuran Musibah #\d+$/i.test(item.label)) {
@@ -716,16 +749,18 @@ function updateTakziahNominal() {
     }
     const oldNominal = takziahState.nominalPerMusibah;
     takziahState.nominalPerMusibah = val;
-    const journalChanges = [];
     takziahState.members.forEach(m => {
         if (!m.payments) return;
         Object.keys(m.payments).forEach(evId => {
             if (m.payments[evId] === oldNominal) {
                 m.payments[evId] = val;
-                const event = takziahState.events.find(ev => ev.id === evId);
-                if (event) journalChanges.push({ member: m, event, amount: val, date: m.paymentDates?.[evId], updateOnly: true });
             }
         });
+    });
+    const journalChanges = (takziahState.paymentTransactions || []).map(transaction => {
+        const member = takziahState.members.find(m => m.id === transaction.memberId);
+        if (member) transaction.amount = transaction.eventIds.reduce((sum, id) => sum + Number(member.payments?.[id] || 0), 0);
+        return { transaction, member, events: takziahState.events.filter(ev => transaction.eventIds.includes(ev.id)) };
     });
     if (typeof syncTakziahPaymentsToJournal === 'function') syncTakziahPaymentsToJournal(journalChanges);
     saveTakziahState();

@@ -2361,19 +2361,28 @@ function saveJurnalKasState(skipCloud = false) {
     }
 }
 
-// Keep Takziah payments mirrored to one stable Journal row per member/event.
-// A stable source key makes this safe to call again after edits without duplicates.
+// Keep every Takziah payment submission mirrored to exactly one Journal row.
 function syncTakziahPaymentsToJournal(changes) {
     if (!Array.isArray(changes) || !changes.length || !Array.isArray(jurnalKasState)) return;
     let changed = false;
 
-    changes.forEach(({ member, event, amount, date, updateOnly }) => {
-        if (!member || !event) return;
-        const sourceKey = `takziah:${member.id}:${event.id}`;
-        const existingIndex = jurnalKasState.findIndex(item => item.sourceKey === sourceKey);
-        const value = Number(amount) || 0;
+    changes.forEach(change => {
+        if (change.legacyMemberId || change.legacyEventIds) {
+            const eventIds = change.legacyEventIds || [];
+            const before = jurnalKasState.length;
+            jurnalKasState = jurnalKasState.filter(item => {
+                if (!item.sourceKey || !item.sourceKey.startsWith('takziah:')) return true;
+                const [, memberId, eventId] = item.sourceKey.split(':');
+                return !((!change.legacyMemberId || memberId === change.legacyMemberId) && (!eventIds.length || eventIds.includes(eventId)));
+            });
+            if (jurnalKasState.length !== before) changed = true;
+        }
 
-        if (value <= 0) {
+        const { transaction, member, events = [], remove, createIfMissing } = change;
+        if (!transaction) return;
+        const sourceKey = `takziah-payment:${transaction.id}`;
+        const existingIndex = jurnalKasState.findIndex(item => item.sourceKey === sourceKey);
+        if (remove || Number(transaction.amount) <= 0 || !member) {
             if (existingIndex >= 0) {
                 jurnalKasState.splice(existingIndex, 1);
                 changed = true;
@@ -2381,7 +2390,7 @@ function syncTakziahPaymentsToJournal(changes) {
             return;
         }
 
-        const rawDate = String(date || '').trim();
+        const rawDate = String(transaction.date || '').trim();
         let isoDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : '';
         if (!isoDate) {
             const dmy = rawDate.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
@@ -2390,8 +2399,10 @@ function syncTakziahPaymentsToJournal(changes) {
         if (!isoDate) isoDate = new Date().toISOString().slice(0, 10);
         const [year, month, day] = isoDate.split('-');
         const dateFormatted = `${day}/${month}/${year}`;
-        const eventText = [event.label, event.date].filter(Boolean).join(' - ');
+        const eventLabels = events.map(event => [event.label, event.date].filter(Boolean).join(' '));
+        const eventText = eventLabels.length ? eventLabels.join(', ') : `${(transaction.eventIds || []).length} iuran musibah`;
         const description = `Iuran Takziah - ${member.name} - ${eventText}`;
+        const value = Number(transaction.amount) || 0;
 
         if (existingIndex >= 0) {
             const item = jurnalKasState[existingIndex];
@@ -2401,7 +2412,7 @@ function syncTakziahPaymentsToJournal(changes) {
             }
             return;
         }
-        if (updateOnly) return;
+        if (!createIfMissing) return;
 
         const nextNo = jurnalKasState.reduce((max, item) => Math.max(max, Number(item.no) || 0), 0) + 1;
         jurnalKasState.push({
