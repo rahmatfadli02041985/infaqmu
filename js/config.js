@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
     WA_REPORTS: 'infaqmu_wa_reports_v7',
     TAKZIAH: 'infaqmu_takziah_data_v1',
     JURNAL_KAS: 'infaqmu_jurnal_kas_v1',
+    JURNAL_CATEGORIES: 'infaqmu_jurnal_categories_v1',
     ACTIVITY_LOGS: 'infaqmu_activity_logs_v1'
 };
 

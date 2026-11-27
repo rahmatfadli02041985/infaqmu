@@ -5,7 +5,8 @@ alter table public.infaq_settings
     add column if not exists show_quick_login boolean,
     add column if not exists wa_reports_data jsonb,
     add column if not exists takziah_data jsonb,
-    add column if not exists jurnal_kas_data jsonb;
+    add column if not exists jurnal_kas_data jsonb,
+    add column if not exists jurnal_kas_categories jsonb;
 
 -- Segarkan cache PostgREST supaya kolom baru langsung dikenali oleh API.
 notify pgrst, 'reload schema';

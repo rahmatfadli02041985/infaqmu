@@ -2302,6 +2302,7 @@ const INITIAL_JURNAL_KAS = [
 ];
 
 let jurnalKasState = [...INITIAL_JURNAL_KAS];
+let jurnalKasCategories = [];
 
 function getJurnalDefaultFilter() {
     const now = new Date();
@@ -2321,6 +2322,7 @@ let jurnalFilter = getJurnalDefaultFilter();
 
 
 function loadJurnalKasState() {
+    let loaded = false;
     try {
         const key = (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.JURNAL_KAS)
             ? STORAGE_KEYS.JURNAL_KAS
@@ -2330,11 +2332,21 @@ function loadJurnalKasState() {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length > 0) {
                 jurnalKasState = parsed;
-                return;
+                loaded = true;
             }
         }
     } catch (e) {}
-    jurnalKasState = JSON.parse(JSON.stringify(INITIAL_JURNAL_KAS));
+    if (!loaded) jurnalKasState = JSON.parse(JSON.stringify(INITIAL_JURNAL_KAS));
+
+    try {
+        const rawCategories = localStorage.getItem(STORAGE_KEYS.JURNAL_CATEGORIES);
+        const parsedCategories = rawCategories ? JSON.parse(rawCategories) : null;
+        jurnalKasCategories = Array.isArray(parsedCategories)
+            ? parsedCategories.filter(category => typeof category === 'string' && category.trim())
+            : [];
+    } catch (e) {
+        jurnalKasCategories = [];
+    }
 }
 
 function saveJurnalKasState(skipCloud = false) {
@@ -2346,6 +2358,15 @@ function saveJurnalKasState(skipCloud = false) {
     } catch (e) {}
     if (!skipCloud && typeof queueSharedAppStateSave === 'function') {
         queueSharedAppStateSave('jurnal_kas_data', jurnalKasState);
+    }
+}
+
+function saveJurnalCategoryState(skipCloud = false) {
+    try {
+        localStorage.setItem(STORAGE_KEYS.JURNAL_CATEGORIES, JSON.stringify(jurnalKasCategories));
+    } catch (e) {}
+    if (!skipCloud && typeof queueSharedAppStateSave === 'function') {
+        queueSharedAppStateSave('jurnal_kas_categories', jurnalKasCategories);
     }
 }
 
@@ -2372,11 +2393,158 @@ function getJurnalWithCumulativeBalance() {
 }
 
 function getJurnalUniqueCategories() {
-    const cats = new Set();
+    const cats = new Set(jurnalKasCategories);
     jurnalKasState.forEach(item => {
         if (item.category) cats.add(item.category);
     });
     return Array.from(cats).sort();
+}
+
+function refreshNewJurnalCategorySelect(selectedValue = '') {
+    const select = document.getElementById('new-jurnal-category');
+    if (!select) return;
+    const categories = getJurnalUniqueCategories();
+    select.innerHTML = [
+        '<option value="">Pilih kategori transaksi</option>',
+        ...categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+    ].join('');
+    select.value = categories.includes(selectedValue) ? selectedValue : '';
+}
+
+function openJurnalCategoryManager() {
+    if (currentRole !== 'admin') return;
+    let modal = document.getElementById('jurnal-category-manager-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'jurnal-category-manager-modal';
+        modal.className = 'fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-5 space-y-4 max-h-[85vh] flex flex-col">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+                    <div>
+                        <h3 class="font-display font-extrabold text-base text-slate-900">Kelola Kategori Jurnal Kas</h3>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Kategori yang dipakai transaksi tidak dapat dihapus.</p>
+                    </div>
+                    <button type="button" onclick="closeJurnalCategoryManager()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold">×</button>
+                </div>
+                <form id="form-add-jurnal-category" class="flex gap-2 shrink-0">
+                    <input type="text" id="new-jurnal-category-name" required maxlength="80" placeholder="Nama kategori baru" class="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold outline-none focus:border-emerald-500">
+                    <button type="submit" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">Tambah</button>
+                </form>
+                <div id="jurnal-category-manager-list" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelector('#form-add-jurnal-category').addEventListener('submit', handleAddJurnalCategory);
+        modal.querySelector('#jurnal-category-manager-list').addEventListener('click', handleJurnalCategoryManagerAction);
+    }
+    renderJurnalCategoryManager();
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeJurnalCategoryManager() {
+    const modal = document.getElementById('jurnal-category-manager-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function renderJurnalCategoryManager() {
+    const list = document.getElementById('jurnal-category-manager-list');
+    if (!list) return;
+    const categories = getJurnalUniqueCategories();
+    if (categories.length === 0) {
+        list.innerHTML = '<p class="py-8 text-center text-xs text-slate-400">Belum ada kategori.</p>';
+        return;
+    }
+    list.innerHTML = categories.map(category => {
+        const usageCount = jurnalKasState.filter(item => item.category === category).length;
+        return `
+            <div class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2">
+                <div class="min-w-0 flex-1">
+                    <div class="truncate text-xs font-bold text-slate-800">${escapeHtml(category)}</div>
+                    <div class="text-[10px] text-slate-500">${usageCount} transaksi</div>
+                </div>
+                <button type="button" data-category-action="rename" data-category="${escapeHtml(category)}" class="px-2 py-1 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 text-[10px] font-bold">Ubah</button>
+                <button type="button" data-category-action="delete" data-category="${escapeHtml(category)}" class="px-2 py-1 rounded-lg ${usageCount ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-rose-50 text-rose-700 hover:bg-rose-100'} text-[10px] font-bold" ${usageCount ? 'disabled' : ''}>Hapus</button>
+            </div>
+        `;
+    }).join('');
+}
+
+function handleAddJurnalCategory(event) {
+    event.preventDefault();
+    if (currentRole !== 'admin') return;
+    const input = document.getElementById('new-jurnal-category-name');
+    const name = input?.value.trim();
+    if (!name) return;
+    if (getJurnalUniqueCategories().some(category => category.toLowerCase() === name.toLowerCase())) {
+        showToast('Kategori tersebut sudah ada.', 'error');
+        return;
+    }
+    jurnalKasCategories = getJurnalUniqueCategories();
+    jurnalKasCategories.push(name);
+    saveJurnalCategoryState();
+    refreshNewJurnalCategorySelect(name);
+    renderJurnalCategoryManager();
+    input.value = '';
+    showToast(`Kategori “${name}” berhasil ditambahkan.`, 'success');
+}
+
+async function handleJurnalCategoryManagerAction(event) {
+    if (currentRole !== 'admin') return;
+    const button = event.target.closest('[data-category-action]');
+    if (!button) return;
+    const category = button.dataset.category;
+
+    if (button.dataset.categoryAction === 'rename') {
+        const newName = await showInAppDialog({
+            title: 'Ubah Kategori Jurnal Kas',
+            message: 'Nama baru juga akan diterapkan ke transaksi yang menggunakan kategori ini.',
+            inputDefault: category,
+            confirmText: 'Simpan'
+        });
+        if (!newName || !newName.trim()) return;
+        const cleanedName = newName.trim();
+        if (cleanedName.toLowerCase() !== category.toLowerCase() && getJurnalUniqueCategories().some(item => item.toLowerCase() === cleanedName.toLowerCase())) {
+            showToast('Kategori dengan nama tersebut sudah ada.', 'error');
+            return;
+        }
+        jurnalKasCategories = getJurnalUniqueCategories().map(item => item === category ? cleanedName : item);
+        jurnalKasState.forEach(item => {
+            if (item.category === category) item.category = cleanedName;
+        });
+        if (jurnalFilter.category === category) jurnalFilter.category = cleanedName;
+        saveJurnalCategoryState();
+        saveJurnalKasState();
+        refreshNewJurnalCategorySelect(cleanedName);
+        renderJurnalCategoryManager();
+        renderJurnalView();
+        showToast('Kategori dan transaksi terkait berhasil diperbarui.', 'success');
+        return;
+    }
+
+    if (button.dataset.categoryAction === 'delete') {
+        const usageCount = jurnalKasState.filter(item => item.category === category).length;
+        if (usageCount > 0) {
+            showToast('Kategori masih dipakai transaksi dan tidak dapat dihapus.', 'error');
+            return;
+        }
+        const confirmed = await showInAppDialog({
+            title: 'Hapus Kategori?',
+            message: `Kategori “${category}” akan dihapus dari daftar referensi.`,
+            confirmText: 'Hapus',
+            cancelText: 'Batal'
+        });
+        if (!confirmed) return;
+        jurnalKasCategories = getJurnalUniqueCategories().filter(item => item !== category);
+        saveJurnalCategoryState();
+        refreshNewJurnalCategorySelect();
+        renderJurnalCategoryManager();
+        renderJurnalView();
+        showToast('Kategori berhasil dihapus.', 'success');
+    }
 }
 
 function getJurnalUniqueYears() {
@@ -2949,7 +3117,10 @@ function openAddJurnalModal() {
                         <input type="text" id="new-jurnal-amount" required placeholder="Contoh: 100.000" oninput="formatMoneyInputLive(this)" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold outline-none focus:border-emerald-500">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Kategori</label>
+                        <div class="mb-1 flex items-center justify-between gap-2">
+                            <label for="new-jurnal-category" class="block text-xs font-bold text-slate-700">Kategori</label>
+                            <button type="button" onclick="openJurnalCategoryManager()" class="text-[10px] font-bold text-emerald-700 hover:text-emerald-900">Kelola Kategori</button>
+                        </div>
                         <select id="new-jurnal-category" required class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-emerald-500">
                             <option value="">Pilih kategori transaksi</option>
                         </select>
@@ -2967,15 +3138,7 @@ function openAddJurnalModal() {
         `;
         document.body.appendChild(modal);
     }
-    const categorySelect = modal.querySelector('#new-jurnal-category');
-    if (categorySelect) {
-        const categories = getJurnalUniqueCategories();
-        categorySelect.innerHTML = [
-            '<option value="">Pilih kategori transaksi</option>',
-            ...categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
-        ].join('');
-        categorySelect.value = '';
-    }
+    refreshNewJurnalCategorySelect();
     modal.classList.remove('hidden');
 }
 

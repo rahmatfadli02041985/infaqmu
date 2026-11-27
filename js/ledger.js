@@ -294,6 +294,12 @@ async function syncInitialData(showNotification = false) {
                 if (typeof saveJurnalKasState === 'function') saveJurnalKasState(true);
                 if (currentMainView === 'jurnal') renderJurnalView();
             }
+            if (Array.isArray(s.jurnal_kas_categories)) {
+                jurnalKasCategories = s.jurnal_kas_categories.filter(category => typeof category === 'string' && category.trim());
+                if (typeof saveJurnalCategoryState === 'function') saveJurnalCategoryState(true);
+                if (typeof refreshNewJurnalCategorySelect === 'function') refreshNewJurnalCategorySelect();
+                if (currentMainView === 'jurnal') renderJurnalView();
+            }
         }
 
         if (txResult.status === 'fulfilled' && Array.isArray(txResult.value)) {
@@ -838,6 +844,7 @@ async function pushLocalDataToCloud() {
         await saveSharedAppState('wa_reports_data', waReportsStore);
         await saveSharedAppState('takziah_data', takziahState);
         await saveSharedAppState('jurnal_kas_data', jurnalKasState);
+        await saveSharedAppState('jurnal_kas_categories', getJurnalUniqueCategories());
         await syncInitialData(false);
         showToast(`${localRows.length} transaksi dan data modul berhasil diunggah ke Supabase.`, 'success');
     } catch (err) {

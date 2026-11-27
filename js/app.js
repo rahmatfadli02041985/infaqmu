@@ -1509,7 +1509,8 @@ async function handleSaveSecuritySettings(e) {
                 show_quick_login: newSettings.showQuickLogin,
                 wa_reports_data: waReportsStore,
                 takziah_data: takziahState,
-                jurnal_kas_data: jurnalKasState
+                jurnal_kas_data: jurnalKasState,
+                jurnal_kas_categories: getJurnalUniqueCategories()
             }]
         });
         if (!Array.isArray(savedSettings) || savedSettings.length === 0) {
@@ -1619,7 +1620,8 @@ function backupDatabaseToLocalDrive(format = 'json') {
             transactions: transactions,
             waReportsStore: waReportsStore,
             takziah: takziahData,
-            jurnalKas: jurnalKasData
+            jurnalKas: jurnalKasData,
+            jurnalKasCategories: typeof jurnalKasCategories !== 'undefined' ? getJurnalUniqueCategories() : []
         }
     };
 
@@ -1664,7 +1666,7 @@ async function replaceSupabaseDataFromBackup(backupData, settings) {
 
     // Pastikan migrasi kolom modul sudah diterapkan sebelum menyentuh data transaksi.
     await supabaseRestFetch(
-        'infaq_settings?select=id,show_feed_for_viewer,show_quick_login,wa_reports_data,takziah_data,jurnal_kas_data&limit=0',
+        'infaq_settings?select=id,show_feed_for_viewer,show_quick_login,wa_reports_data,takziah_data,jurnal_kas_data,jurnal_kas_categories&limit=0',
         { timeout: 10000 },
         0
     );
@@ -1690,7 +1692,8 @@ async function replaceSupabaseDataFromBackup(backupData, settings) {
         show_quick_login: settings.showQuickLogin !== false,
         wa_reports_data: backupData.waReportsStore,
         takziah_data: backupData.takziah,
-        jurnal_kas_data: backupData.jurnalKas
+        jurnal_kas_data: backupData.jurnalKas,
+        jurnal_kas_categories: backupData.jurnalKasCategories
     };
 
     let cloudChanged = false;
@@ -1798,6 +1801,9 @@ async function handleRestoreBackupFile(event) {
             throw new Error('Data Iuran Takziah tidak lengkap di dalam file backup.');
         }
         if (!Array.isArray(data.jurnalKas)) throw new Error('Data Jurnal Kas tidak ditemukan di dalam file backup.');
+        if (!Array.isArray(data.jurnalKasCategories)) {
+            data.jurnalKasCategories = [...new Set(data.jurnalKas.map(item => item.category).filter(Boolean))];
+        }
 
         const confirm = await showInAppDialog({
             title: 'Pulihkan Database?',
@@ -1828,9 +1834,11 @@ async function handleRestoreBackupFile(event) {
         waReportsStore = { ...getDefaultWaReports(), ...data.waReportsStore };
         takziahState = data.takziah;
         jurnalKasState = data.jurnalKas;
+        jurnalKasCategories = data.jurnalKasCategories;
         saveLocalCache();
         saveTakziahState(true);
         saveJurnalKasState(true);
+        saveJurnalCategoryState(true);
         applySettingsToUI();
         deduplicateMonthlyLedgerRecords();
         populateYearFilter();
