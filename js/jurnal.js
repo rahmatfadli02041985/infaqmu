@@ -2803,7 +2803,7 @@ function renderJurnalView() {
                         Reset Filter
                     </button>
                     ${isAdmin ? `
-                        <button type="button" onclick="openAddJurnalModal()" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-xs">
+                        <button type="button" onclick="openAddJurnalModal()" class="px-3.5 py-2 rounded-xl border border-sky-300 border-b-4 border-b-indigo-800 bg-gradient-to-b from-sky-400 via-blue-500 to-indigo-600 text-white text-xs font-extrabold shadow-lg shadow-blue-300/60 transition-all hover:from-sky-300 hover:via-blue-500 hover:to-indigo-500 active:translate-y-0.5 active:border-b-2 active:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2">
                             + Transaksi Baru
                         </button>
                     ` : ''}
