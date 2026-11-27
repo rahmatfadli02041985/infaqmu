@@ -2347,6 +2347,30 @@ function loadJurnalKasState() {
     } catch (e) {
         jurnalKasCategories = [];
     }
+
+    if (typeof takziahState !== 'undefined' && Array.isArray(takziahState.members)) {
+        let descriptionsChanged = false;
+        jurnalKasState.forEach(item => {
+            if (!String(item.sourceKey || '').startsWith('takziah')) return;
+            let memberId = '';
+            if (item.sourceKey.startsWith('takziah-payment:')) {
+                const transactionId = item.sourceKey.slice('takziah-payment:'.length);
+                const payment = (takziahState.paymentTransactions || []).find(tx => tx.id === transactionId);
+                memberId = payment?.memberId || '';
+            } else if (item.sourceKey.startsWith('takziah:')) {
+                memberId = item.sourceKey.split(':')[1] || '';
+            }
+            const member = takziahState.members.find(entry => entry.id === memberId)
+                || takziahState.members.find(entry => entry.name && String(item.desc || '').toLowerCase().includes(String(entry.name).toLowerCase()));
+            if (!member) return;
+            const description = `Iuran Takziah - ${member.name}`;
+            if (item.desc !== description) {
+                item.desc = description;
+                descriptionsChanged = true;
+            }
+        });
+        if (descriptionsChanged) saveJurnalKasState();
+    }
 }
 
 function saveJurnalKasState(skipCloud = false) {
@@ -2399,9 +2423,7 @@ function syncTakziahPaymentsToJournal(changes) {
         if (!isoDate) isoDate = new Date().toISOString().slice(0, 10);
         const [year, month, day] = isoDate.split('-');
         const dateFormatted = `${day}/${month}/${year}`;
-        const eventLabels = events.map(event => [event.label, event.date].filter(Boolean).join(' '));
-        const eventText = eventLabels.length ? eventLabels.join(', ') : `${(transaction.eventIds || []).length} iuran musibah`;
-        const description = `Iuran Takziah - ${member.name} - ${eventText}`;
+        const description = `Iuran Takziah - ${member.name}`;
         const value = Number(transaction.amount) || 0;
 
         if (existingIndex >= 0) {
@@ -2495,6 +2517,58 @@ function refreshEditJurnalCategorySelect(selectedValue = '') {
     refreshJurnalCategorySelect('edit-jurnal-category', selectedValue);
 }
 
+function isTakziahJournalCategory(category) {
+    return String(category || '').trim().toLowerCase() === 'iuran takziah';
+}
+
+function findTakziahMemberIdFromDescription(description) {
+    if (typeof takziahState === 'undefined' || !Array.isArray(takziahState.members)) return '';
+    const normalized = String(description || '').toLowerCase();
+    const match = [...takziahState.members]
+        .filter(member => member.name && normalized.includes(String(member.name).toLowerCase()))
+        .sort((a, b) => String(b.name).length - String(a.name).length)[0];
+    return match ? match.id : '';
+}
+
+function getJurnalDescriptionValue(mode) {
+    const memberSelect = document.getElementById(`${mode}-jurnal-desc-member`);
+    if (memberSelect) {
+        const member = (typeof takziahState !== 'undefined' ? takziahState.members : []).find(item => item.id === memberSelect.value);
+        return member ? `Iuran Takziah - ${member.name}` : '';
+    }
+    return document.getElementById(`${mode}-jurnal-desc`)?.value.trim() || '';
+}
+
+function renderJurnalDescriptionField(mode, currentValue = '') {
+    const container = document.getElementById(`${mode}-jurnal-desc-container`);
+    const categorySelect = document.getElementById(`${mode}-jurnal-category`);
+    if (!container || !categorySelect) return;
+
+    if (isTakziahJournalCategory(categorySelect.value)) {
+        const members = typeof takziahState !== 'undefined' && Array.isArray(takziahState.members)
+            ? [...takziahState.members].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'id'))
+            : [];
+        const selectedMemberId = findTakziahMemberIdFromDescription(currentValue);
+        container.innerHTML = `
+            <label for="${mode}-jurnal-desc-member" class="block text-xs font-bold text-slate-700 mb-1">Keterangan Lengkap</label>
+            <select id="${mode}-jurnal-desc-member" required class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-emerald-500">
+                <option value="">${members.length ? 'Pilih nama anggota' : 'Belum ada anggota Takziah'}</option>
+                ${members.map(member => `<option value="${escapeHtml(member.id)}" ${member.id === selectedMemberId ? 'selected' : ''}>${escapeHtml(member.name)}</option>`).join('')}
+            </select>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <label for="${mode}-jurnal-desc" class="block text-xs font-bold text-slate-700 mb-1">Keterangan Lengkap</label>
+        <textarea id="${mode}-jurnal-desc" required rows="2" placeholder="Tuliskan keterangan detail transaksi..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold outline-none focus:border-emerald-500">${escapeHtml(currentValue)}</textarea>
+    `;
+}
+
+function handleJurnalCategorySelection(mode) {
+    renderJurnalDescriptionField(mode, getJurnalDescriptionValue(mode));
+}
+
 function openJurnalCategoryManager() {
     if (currentRole !== 'admin') return;
     let modal = document.getElementById('jurnal-category-manager-modal');
@@ -2572,6 +2646,8 @@ function handleAddJurnalCategory(event) {
     saveJurnalCategoryState();
     refreshNewJurnalCategorySelect(name);
     refreshEditJurnalCategorySelect(document.getElementById('edit-jurnal-category')?.value || '');
+    handleJurnalCategorySelection('new');
+    handleJurnalCategorySelection('edit');
     renderJurnalCategoryManager();
     input.value = '';
     showToast(`Kategori “${name}” berhasil ditambahkan.`, 'success');
@@ -2606,6 +2682,8 @@ async function handleJurnalCategoryManagerAction(event) {
         saveJurnalKasState();
         refreshNewJurnalCategorySelect(cleanedName);
         refreshEditJurnalCategorySelect(editSelectedCategory === category ? cleanedName : editSelectedCategory);
+        handleJurnalCategorySelection('new');
+        handleJurnalCategorySelection('edit');
         renderJurnalCategoryManager();
         renderJurnalView();
         showToast('Kategori dan transaksi terkait berhasil diperbarui.', 'success');
@@ -2629,6 +2707,8 @@ async function handleJurnalCategoryManagerAction(event) {
         saveJurnalCategoryState();
         refreshNewJurnalCategorySelect();
         refreshEditJurnalCategorySelect(editSelectedCategory);
+        handleJurnalCategorySelection('new');
+        handleJurnalCategorySelection('edit');
         renderJurnalCategoryManager();
         renderJurnalView();
         showToast('Kategori berhasil dihapus.', 'success');
@@ -3209,14 +3289,11 @@ function openAddJurnalModal() {
                             <label for="new-jurnal-category" class="block text-xs font-bold text-slate-700">Kategori</label>
                             <button type="button" onclick="openJurnalCategoryManager()" class="text-[10px] font-bold text-emerald-700 hover:text-emerald-900">Kelola Kategori</button>
                         </div>
-                        <select id="new-jurnal-category" required class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-emerald-500">
+                        <select id="new-jurnal-category" required onchange="handleJurnalCategorySelection('new')" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-emerald-500">
                             <option value="">Pilih kategori transaksi</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Keterangan Lengkap</label>
-                        <textarea id="new-jurnal-desc" required rows="2" placeholder="Tuliskan keterangan detail transaksi..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold outline-none focus:border-emerald-500"></textarea>
-                    </div>
+                    <div id="new-jurnal-desc-container"></div>
                     <div class="flex items-center justify-end gap-2 pt-2">
                         <button type="button" onclick="closeAddJurnalModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">Batal</button>
                         <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md">Simpan Transaksi</button>
@@ -3227,6 +3304,7 @@ function openAddJurnalModal() {
         document.body.appendChild(modal);
     }
     refreshNewJurnalCategorySelect();
+    renderJurnalDescriptionField('new', '');
     modal.classList.remove('hidden');
 }
 
@@ -3243,10 +3321,14 @@ function handleSaveNewJurnalTransaction(e) {
     const typeVal = document.getElementById('new-jurnal-type').value;
     const amountVal = parseIndoNumber(document.getElementById('new-jurnal-amount').value);
     const catVal = document.getElementById('new-jurnal-category').value.trim();
-    const descVal = document.getElementById('new-jurnal-desc').value.trim();
+    const descVal = getJurnalDescriptionValue('new');
 
     if (!amountVal || amountVal <= 0) {
         showToast('Nominal harus lebih dari 0.', 'error');
+        return;
+    }
+    if (!descVal) {
+        showToast(isTakziahJournalCategory(catVal) ? 'Silakan pilih nama anggota Takziah.' : 'Keterangan transaksi wajib diisi.', 'error');
         return;
     }
 
@@ -3327,14 +3409,11 @@ function openEditJurnalModal(itemId) {
                         <label for="edit-jurnal-category" class="block text-xs font-bold text-slate-700">Kategori</label>
                         <button type="button" onclick="openJurnalCategoryManager()" class="text-[10px] font-bold text-emerald-700 hover:text-emerald-900">Kelola Kategori</button>
                     </div>
-                    <select id="edit-jurnal-category" required class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-emerald-500">
+                    <select id="edit-jurnal-category" required onchange="handleJurnalCategorySelection('edit')" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-emerald-500">
                         <option value="">Pilih kategori transaksi</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Keterangan Lengkap</label>
-                    <textarea id="edit-jurnal-desc" required rows="2" placeholder="Tuliskan keterangan detail transaksi..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold outline-none focus:border-emerald-500">${escapeHtml(item.desc || '')}</textarea>
-                </div>
+                <div id="edit-jurnal-desc-container"></div>
                 <div class="flex items-center justify-end gap-2 pt-2">
                     <button type="button" onclick="closeEditJurnalModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">Batal</button>
                     <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md">Simpan Perubahan</button>
@@ -3343,6 +3422,7 @@ function openEditJurnalModal(itemId) {
         </div>
     `;
     refreshEditJurnalCategorySelect(item.category || '');
+    renderJurnalDescriptionField('edit', item.desc || '');
     modal.classList.remove('hidden');
 }
 
@@ -3362,10 +3442,14 @@ function handleUpdateJurnalTransaction(e, itemId) {
     const typeVal = document.getElementById('edit-jurnal-type').value;
     const amountVal = parseIndoNumber(document.getElementById('edit-jurnal-amount').value);
     const catVal = document.getElementById('edit-jurnal-category').value.trim();
-    const descVal = document.getElementById('edit-jurnal-desc').value.trim();
+    const descVal = getJurnalDescriptionValue('edit');
 
     if (!amountVal || amountVal <= 0) {
         showToast('Nominal harus lebih dari 0.', 'error');
+        return;
+    }
+    if (!descVal) {
+        showToast(isTakziahJournalCategory(catVal) ? 'Silakan pilih nama anggota Takziah.' : 'Keterangan transaksi wajib diisi.', 'error');
         return;
     }
 

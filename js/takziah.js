@@ -56,7 +56,7 @@ let takziahState = {
     ]
 };
 
-function formatTakziahDateForInput(value) {
+function formatTakziahDateText(value) {
     const text = String(value || '').trim();
     const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
@@ -64,18 +64,8 @@ function formatTakziahDateForInput(value) {
     return dmy ? `${dmy[1].padStart(2, '0')}/${dmy[2].padStart(2, '0')}/${dmy[3]}` : '';
 }
 
-function isValidTakziahDateText(value) {
-    const match = String(value || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    if (!match) return false;
-    const day = Number(match[1]);
-    const month = Number(match[2]);
-    const year = Number(match[3]);
-    const parsed = new Date(Date.UTC(year, month - 1, day));
-    return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
-}
-
 function formatTakziahEventDate(value) {
-    return formatTakziahDateForInput(value) || String(value || '');
+    return formatTakziahDateText(value) || String(value || '');
 }
 
 function loadTakziahState() {
@@ -476,7 +466,7 @@ function renderTakziahView() {
                         </button>
                     </form>
                     <form onsubmit="handleAddTakziahEvent(event)" class="flex items-center gap-1.5 min-w-0">
-                        <input type="text" id="takziah-new-event-date" required inputmode="numeric" maxlength="10" placeholder="dd/mm/yyyy" class="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-amber-600">
+                        <input type="text" id="takziah-new-event-date" required maxlength="80" placeholder="Keterangan musibah (cth: Musibah #18)" class="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-amber-600">
                         <button type="submit" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold shrink-0">
                             + Musibah #${events.length + 1}
                         </button>
@@ -545,6 +535,56 @@ function renderTakziahView() {
     setupTakziahDualHorizontalScroll();
 }
 
+function normalizeTakziahPaymentDate(value) {
+    const text = String(value || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+    const dmy = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    return dmy ? `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}` : '';
+}
+
+function showTakziahPaymentActions({ member, event, amount, date }) {
+    return new Promise(resolve => {
+        let modal = document.getElementById('takziah-payment-action-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'takziah-payment-action-modal';
+            document.body.appendChild(modal);
+        }
+        modal.className = 'fixed inset-0 z-[80] bg-slate-950/65 backdrop-blur-sm hidden items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-5 space-y-4">
+                <div>
+                    <h3 class="font-display font-extrabold text-base text-slate-900">Kelola Pembayaran Iuran</h3>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-600">${escapeHtml(member.name)} — ${escapeHtml(event?.label || 'Iuran Takziah')} (${escapeHtml(formatTakziahEventDate(event?.date))})<br>Nominal: <strong>${formatRupiahCompactNoSpace(amount)}</strong></p>
+                </div>
+                <div>
+                    <label for="takziah-payment-action-date" class="mb-1 block text-xs font-bold text-slate-700">Tanggal Pembayaran</label>
+                    <input type="date" id="takziah-payment-action-date" value="${escapeHtml(date)}" class="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-semibold outline-none focus:border-emerald-500">
+                </div>
+                <div class="flex flex-wrap items-center justify-end gap-2 pt-1">
+                    <button type="button" data-payment-action="cancel" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs">Batal</button>
+                    <button type="button" data-payment-action="delete" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs">Hapus</button>
+                    <button type="button" data-payment-action="update" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md">Ubah</button>
+                </div>
+            </div>
+        `;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        const finish = result => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            resolve(result);
+        };
+        modal.querySelector('[data-payment-action="cancel"]').onclick = () => finish(null);
+        modal.querySelector('[data-payment-action="delete"]').onclick = () => finish({ action: 'delete' });
+        modal.querySelector('[data-payment-action="update"]').onclick = () => finish({
+            action: 'update',
+            date: modal.querySelector('#takziah-payment-action-date').value
+        });
+    });
+}
+
 async function toggleTakziahPayment(memberId, eventId) {
     if (currentRole !== 'admin') return;
     const member = takziahState.members.find(m => m.id === memberId);
@@ -560,19 +600,60 @@ async function toggleTakziahPayment(memberId, eventId) {
 
     const evObj = (takziahState.events || []).find(ev => ev.id === eventId);
     const evLabel = evObj ? `${evObj.label} (${evObj.date})` : 'iuran musibah ini';
-    const rawPayDate = member.paymentDates[eventId];
-    const payDateText = rawPayDate
-        ? (rawPayDate.includes('-') ? formatDateIndo(rawPayDate) : rawPayDate)
-        : (evObj && evObj.date && !evObj.date.startsWith('Musibah') ? evObj.date : formatDateIndo(new Date().toISOString().split('T')[0]));
+    const defaultDate = normalizeTakziahPaymentDate(member.paymentDates[eventId])
+        || normalizeTakziahPaymentDate(evObj?.date)
+        || new Date().toISOString().slice(0, 10);
+    const action = await showTakziahPaymentActions({ member, event: evObj, amount: currentVal, date: defaultDate });
+    if (!action) return;
 
-    const confirmed = await showInAppDialog({
-        title: 'Batalkan Pembayaran Iuran?',
-        message: `Apakah Anda yakin ingin membatalkan pembayaran ${member.name} pada ${evLabel} sebesar ${formatRupiahCompactNoSpace(currentVal)} (Tanggal Transaksi Pembayaran: ${payDateText}) menjadi Rp0?`,
-        confirmText: 'Ya, Ubah ke Rp0',
-        cancelText: 'Batal'
-    });
+    if (action.action === 'update') {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(action.date || '')) {
+            showToast('Pilih tanggal pembayaran yang valid.', 'error');
+            return;
+        }
+        const relatedTransactions = (takziahState.paymentTransactions || []).filter(tx => tx.memberId === memberId && (tx.eventIds || []).includes(eventId));
+        if (!Array.isArray(takziahState.paymentTransactions)) takziahState.paymentTransactions = [];
+        if (relatedTransactions.length === 0) {
+            const transaction = {
+                id: `tp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                memberId,
+                eventIds: [eventId],
+                amount: currentVal,
+                date: action.date
+            };
+            takziahState.paymentTransactions.push(transaction);
+            member.paymentDates[eventId] = action.date;
+            if (typeof syncTakziahPaymentsToJournal === 'function') {
+                syncTakziahPaymentsToJournal([
+                    { legacyMemberId: memberId, legacyEventIds: [eventId] },
+                    { transaction, member, events: evObj ? [evObj] : [], createIfMissing: true }
+                ]);
+            }
+        } else {
+            const legacyEventIds = new Set();
+            const changes = [];
+            relatedTransactions.forEach(transaction => {
+                transaction.date = action.date;
+                transaction.eventIds.forEach(id => {
+                    member.paymentDates[id] = action.date;
+                    legacyEventIds.add(id);
+                });
+                changes.push({
+                    transaction,
+                    member,
+                    events: takziahState.events.filter(ev => transaction.eventIds.includes(ev.id)),
+                    createIfMissing: true
+                });
+            });
+            changes.unshift({ legacyMemberId: memberId, legacyEventIds: Array.from(legacyEventIds) });
+            if (typeof syncTakziahPaymentsToJournal === 'function') syncTakziahPaymentsToJournal(changes);
+        }
 
-    if (!confirmed) return;
+        saveTakziahState();
+        renderTakziahView();
+        showToast(`Tanggal pembayaran ${member.name} berhasil diperbarui dan disinkronkan ke Jurnal Kas.`, 'success');
+        return;
+    }
 
     const prevScrollLeft = document.getElementById('takziah-bottom-table-scroll')?.scrollLeft || 0;
     member.payments[eventId] = 0;
@@ -594,7 +675,7 @@ async function toggleTakziahPayment(memberId, eventId) {
     const newTopBar = document.getElementById('takziah-top-scroll-bar');
     if (newBottomWrap) newBottomWrap.scrollLeft = prevScrollLeft;
     if (newTopBar) newTopBar.scrollLeft = prevScrollLeft;
-    showToast(`Pembayaran ${member.name} pada ${evLabel} (Tgl: ${payDateText}) dibatalkan menjadi Rp0.`, 'info');
+    showToast(`Pembayaran ${member.name} pada ${evLabel} dihapus dan jurnal terkait diperbarui.`, 'info');
 }
 
 function handleAddTakziahMember(e) {
@@ -669,9 +750,9 @@ function handleAddTakziahEvent(e) {
     e.preventDefault();
     if (currentRole !== 'admin') return;
     const input = document.getElementById('takziah-new-event-date');
-    const dateVal = input ? input.value.trim() : '';
-    if (!isValidTakziahDateText(dateVal)) {
-        showToast('Tanggal musibah harus menggunakan format dd/mm/yyyy yang valid.', 'error');
+    const eventText = input ? input.value.trim() : '';
+    if (!eventText) {
+        showToast('Keterangan musibah tidak boleh kosong.', 'error');
         input?.focus();
         return;
     }
@@ -681,7 +762,7 @@ function handleAddTakziahEvent(e) {
     takziahState.events.push({
         id: newId,
         label: `Iuran Musibah #${nextNum}`,
-        date: dateVal
+        date: eventText
     });
 
     takziahState.members.forEach(m => {
@@ -692,7 +773,7 @@ function handleAddTakziahEvent(e) {
     if (input) input.value = '';
     saveTakziahState();
     renderTakziahView();
-    showToast(`Kolom Iuran Musibah #${nextNum} (${dateVal}) ditambahkan.`, 'success');
+    showToast(`Kolom Iuran Musibah #${nextNum} (${eventText}) ditambahkan.`, 'success');
 }
 
 async function editTakziahEvent(eventId) {
