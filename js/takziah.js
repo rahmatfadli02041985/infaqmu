@@ -56,6 +56,28 @@ let takziahState = {
     ]
 };
 
+function formatTakziahDateForInput(value) {
+    const text = String(value || '').trim();
+    const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+    const dmy = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    return dmy ? `${dmy[1].padStart(2, '0')}/${dmy[2].padStart(2, '0')}/${dmy[3]}` : '';
+}
+
+function isValidTakziahDateText(value) {
+    const match = String(value || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return false;
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+}
+
+function formatTakziahEventDate(value) {
+    return formatTakziahDateForInput(value) || String(value || '');
+}
+
 function loadTakziahState() {
     try {
         const key = (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.TAKZIAH) ? STORAGE_KEYS.TAKZIAH : 'infaqmu_takziah_data_v3';
@@ -306,7 +328,6 @@ function renderTakziahView() {
     const headerEventCols = events.map((ev) => `
         <th class="sticky top-0 z-20 border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 min-w-[115px]">
             <div class="leading-tight">${escapeHtml(ev.label)}</div>
-            <div class="text-[11px] font-bold text-slate-800">(${escapeHtml(ev.date)})</div>
             ${isAdmin ? `
                 <div class="mt-1 flex items-center justify-center gap-1">
                     <button type="button" onclick="editTakziahEvent('${ev.id}')" class="px-1.5 py-0.5 rounded bg-white/80 hover:bg-white text-[9px] font-bold text-slate-700 border border-slate-300" title="Edit Tanggal/Judul">Edit</button>
@@ -455,7 +476,7 @@ function renderTakziahView() {
                         </button>
                     </form>
                     <form onsubmit="handleAddTakziahEvent(event)" class="flex items-center gap-1.5 min-w-0">
-                        <input type="text" id="takziah-new-event-date" required placeholder="Tgl (cth: 25/11/2026)" class="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-amber-600">
+                        <input type="text" id="takziah-new-event-date" required inputmode="numeric" maxlength="10" placeholder="dd/mm/yyyy" class="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-amber-600">
                         <button type="submit" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold shrink-0">
                             + Musibah #${events.length + 1}
                         </button>
@@ -649,7 +670,11 @@ function handleAddTakziahEvent(e) {
     if (currentRole !== 'admin') return;
     const input = document.getElementById('takziah-new-event-date');
     const dateVal = input ? input.value.trim() : '';
-    if (!dateVal) return;
+    if (!isValidTakziahDateText(dateVal)) {
+        showToast('Tanggal musibah harus menggunakan format dd/mm/yyyy yang valid.', 'error');
+        input?.focus();
+        return;
+    }
 
     const nextNum = takziahState.events.length + 1;
     const newId = 'ev-' + Date.now();
@@ -678,19 +703,11 @@ async function editTakziahEvent(eventId) {
         title: 'Ubah Label Kolom Musibah',
         message: 'Contoh: Iuran Musibah #1',
         inputDefault: ev.label,
-        confirmText: 'Lanjut'
-    });
-    if (!newLabel || !newLabel.trim()) return;
-    const newDate = await showInAppDialog({
-        title: 'Ubah Tanggal / Keterangan Musibah',
-        message: 'Contoh: 10/11/2026 atau Musibah #1',
-        inputDefault: ev.date,
         confirmText: 'Simpan'
     });
-    if (!newDate || !newDate.trim()) return;
+    if (!newLabel || !newLabel.trim()) return;
 
     ev.label = newLabel.trim();
-    ev.date = newDate.trim();
     if (typeof syncTakziahPaymentsToJournal === 'function') {
         syncTakziahPaymentsToJournal((takziahState.paymentTransactions || []).filter(tx => (tx.eventIds || []).includes(eventId)).map(transaction => ({
             transaction, member: takziahState.members.find(m => m.id === transaction.memberId),
@@ -699,7 +716,7 @@ async function editTakziahEvent(eventId) {
     }
     saveTakziahState();
     renderTakziahView();
-    showToast('Data musibah diperbarui.', 'success');
+    showToast('Label musibah diperbarui.', 'success');
 }
 
 async function deleteTakziahEvent(eventId) {
@@ -708,7 +725,7 @@ async function deleteTakziahEvent(eventId) {
     if (!ev) return;
     const ok = await showInAppDialog({
         title: 'Hapus Kolom Musibah',
-        message: `Hapus kolom "${ev.label} (${ev.date})"?`,
+        message: `Hapus kolom "${ev.label} (${formatTakziahEventDate(ev.date)})"?`,
         confirmText: 'Hapus'
     });
     if (!ok) return;

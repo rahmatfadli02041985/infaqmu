@@ -2476,8 +2476,8 @@ function getJurnalUniqueCategories() {
     return Array.from(cats).sort();
 }
 
-function refreshNewJurnalCategorySelect(selectedValue = '') {
-    const select = document.getElementById('new-jurnal-category');
+function refreshJurnalCategorySelect(selectId, selectedValue = '') {
+    const select = document.getElementById(selectId);
     if (!select) return;
     const categories = getJurnalUniqueCategories();
     select.innerHTML = [
@@ -2485,6 +2485,14 @@ function refreshNewJurnalCategorySelect(selectedValue = '') {
         ...categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
     ].join('');
     select.value = categories.includes(selectedValue) ? selectedValue : '';
+}
+
+function refreshNewJurnalCategorySelect(selectedValue = '') {
+    refreshJurnalCategorySelect('new-jurnal-category', selectedValue);
+}
+
+function refreshEditJurnalCategorySelect(selectedValue = '') {
+    refreshJurnalCategorySelect('edit-jurnal-category', selectedValue);
 }
 
 function openJurnalCategoryManager() {
@@ -2563,6 +2571,7 @@ function handleAddJurnalCategory(event) {
     jurnalKasCategories.push(name);
     saveJurnalCategoryState();
     refreshNewJurnalCategorySelect(name);
+    refreshEditJurnalCategorySelect(document.getElementById('edit-jurnal-category')?.value || '');
     renderJurnalCategoryManager();
     input.value = '';
     showToast(`Kategori “${name}” berhasil ditambahkan.`, 'success');
@@ -2573,6 +2582,7 @@ async function handleJurnalCategoryManagerAction(event) {
     const button = event.target.closest('[data-category-action]');
     if (!button) return;
     const category = button.dataset.category;
+    const editSelectedCategory = document.getElementById('edit-jurnal-category')?.value || '';
 
     if (button.dataset.categoryAction === 'rename') {
         const newName = await showInAppDialog({
@@ -2595,6 +2605,7 @@ async function handleJurnalCategoryManagerAction(event) {
         saveJurnalCategoryState();
         saveJurnalKasState();
         refreshNewJurnalCategorySelect(cleanedName);
+        refreshEditJurnalCategorySelect(editSelectedCategory === category ? cleanedName : editSelectedCategory);
         renderJurnalCategoryManager();
         renderJurnalView();
         showToast('Kategori dan transaksi terkait berhasil diperbarui.', 'success');
@@ -2617,6 +2628,7 @@ async function handleJurnalCategoryManagerAction(event) {
         jurnalKasCategories = getJurnalUniqueCategories().filter(item => item !== category);
         saveJurnalCategoryState();
         refreshNewJurnalCategorySelect();
+        refreshEditJurnalCategorySelect(editSelectedCategory);
         renderJurnalCategoryManager();
         renderJurnalView();
         showToast('Kategori berhasil dihapus.', 'success');
@@ -3311,8 +3323,13 @@ function openEditJurnalModal(itemId) {
                     <input type="text" id="edit-jurnal-amount" required value="${formatIndoDots(item.amount || item.in || item.out)}" placeholder="Contoh: 100.000" oninput="formatMoneyInputLive(this)" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold outline-none focus:border-emerald-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Kategori</label>
-                    <input type="text" id="edit-jurnal-category" required value="${escapeHtml(item.category || '')}" placeholder="Contoh: Infaq Tabung Pengajian / Iuran Takziah" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold outline-none focus:border-emerald-500">
+                    <div class="mb-1 flex items-center justify-between gap-2">
+                        <label for="edit-jurnal-category" class="block text-xs font-bold text-slate-700">Kategori</label>
+                        <button type="button" onclick="openJurnalCategoryManager()" class="text-[10px] font-bold text-emerald-700 hover:text-emerald-900">Kelola Kategori</button>
+                    </div>
+                    <select id="edit-jurnal-category" required class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-emerald-500">
+                        <option value="">Pilih kategori transaksi</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">Keterangan Lengkap</label>
@@ -3325,6 +3342,7 @@ function openEditJurnalModal(itemId) {
             </form>
         </div>
     `;
+    refreshEditJurnalCategorySelect(item.category || '');
     modal.classList.remove('hidden');
 }
 
