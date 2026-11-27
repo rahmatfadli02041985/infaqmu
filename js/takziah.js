@@ -221,13 +221,16 @@ function handleTakziahBatchPayment(e) {
         return;
     }
 
+    const journalChanges = [];
     for (let i = 0; i < slotsNeeded; i++) {
         const targetEv = unpaidEvents[i];
         member.payments[targetEv.id] = nominal;
         member.paymentDates[targetEv.id] = payDate;
+        journalChanges.push({ member, event: targetEv, amount: nominal, date: payDate });
     }
 
     const prevScrollLeft = document.getElementById('takziah-bottom-table-scroll')?.scrollLeft || 0;
+    if (typeof syncTakziahPaymentsToJournal === 'function') syncTakziahPaymentsToJournal(journalChanges);
     saveTakziahState();
     renderTakziahView();
 
@@ -541,6 +544,7 @@ async function toggleTakziahPayment(memberId, eventId) {
     member.payments[eventId] = 0;
     delete member.paymentDates[eventId];
 
+    if (typeof syncTakziahPaymentsToJournal === 'function') syncTakziahPaymentsToJournal([{ member, event: evObj || { id: eventId }, amount: 0 }]);
     saveTakziahState();
     renderTakziahView();
 
@@ -585,6 +589,11 @@ async function editTakziahMember(memberId) {
     });
     if (newName && newName.trim()) {
         member.name = newName.trim();
+        if (typeof syncTakziahPaymentsToJournal === 'function') {
+            syncTakziahPaymentsToJournal((takziahState.events || []).filter(ev => Number(member.payments?.[ev.id] || 0) > 0).map(ev => ({
+                member, event: ev, amount: Number(member.payments[ev.id]), date: member.paymentDates?.[ev.id], updateOnly: true
+            })));
+        }
         saveTakziahState();
         renderTakziahView();
         showToast('Nama anggota diperbarui.', 'success');
@@ -601,6 +610,9 @@ async function deleteTakziahMember(memberId) {
         confirmText: 'Hapus'
     });
     if (!ok) return;
+    if (typeof syncTakziahPaymentsToJournal === 'function') {
+        syncTakziahPaymentsToJournal((takziahState.events || []).map(ev => ({ member, event: ev, amount: 0 })));
+    }
     takziahState.members = takziahState.members.filter(m => m.id !== memberId);
     saveTakziahState();
     renderTakziahView();
@@ -654,6 +666,11 @@ async function editTakziahEvent(eventId) {
 
     ev.label = newLabel.trim();
     ev.date = newDate.trim();
+    if (typeof syncTakziahPaymentsToJournal === 'function') {
+        syncTakziahPaymentsToJournal(takziahState.members.filter(m => Number(m.payments?.[eventId] || 0) > 0).map(member => ({
+            member, event: ev, amount: Number(member.payments[eventId]), date: member.paymentDates?.[eventId], updateOnly: true
+        })));
+    }
     saveTakziahState();
     renderTakziahView();
     showToast('Data musibah diperbarui.', 'success');
@@ -670,6 +687,9 @@ async function deleteTakziahEvent(eventId) {
     });
     if (!ok) return;
 
+    if (typeof syncTakziahPaymentsToJournal === 'function') {
+        syncTakziahPaymentsToJournal(takziahState.members.map(member => ({ member, event: ev, amount: 0 })));
+    }
     takziahState.events = takziahState.events.filter(x => x.id !== eventId);
     takziahState.events.forEach((item, idx) => {
         if (/^Iuran Musibah #\d+$/i.test(item.label)) {
@@ -696,14 +716,18 @@ function updateTakziahNominal() {
     }
     const oldNominal = takziahState.nominalPerMusibah;
     takziahState.nominalPerMusibah = val;
+    const journalChanges = [];
     takziahState.members.forEach(m => {
         if (!m.payments) return;
         Object.keys(m.payments).forEach(evId => {
             if (m.payments[evId] === oldNominal) {
                 m.payments[evId] = val;
+                const event = takziahState.events.find(ev => ev.id === evId);
+                if (event) journalChanges.push({ member: m, event, amount: val, date: m.paymentDates?.[evId], updateOnly: true });
             }
         });
     });
+    if (typeof syncTakziahPaymentsToJournal === 'function') syncTakziahPaymentsToJournal(journalChanges);
     saveTakziahState();
     renderTakziahView();
     showToast(`Tarif iuran diperbarui menjadi ${formatRupiahCompactNoSpace(val)}.`, 'success');

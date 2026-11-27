@@ -2361,6 +2361,71 @@ function saveJurnalKasState(skipCloud = false) {
     }
 }
 
+// Keep Takziah payments mirrored to one stable Journal row per member/event.
+// A stable source key makes this safe to call again after edits without duplicates.
+function syncTakziahPaymentsToJournal(changes) {
+    if (!Array.isArray(changes) || !changes.length || !Array.isArray(jurnalKasState)) return;
+    let changed = false;
+
+    changes.forEach(({ member, event, amount, date, updateOnly }) => {
+        if (!member || !event) return;
+        const sourceKey = `takziah:${member.id}:${event.id}`;
+        const existingIndex = jurnalKasState.findIndex(item => item.sourceKey === sourceKey);
+        const value = Number(amount) || 0;
+
+        if (value <= 0) {
+            if (existingIndex >= 0) {
+                jurnalKasState.splice(existingIndex, 1);
+                changed = true;
+            }
+            return;
+        }
+
+        const rawDate = String(date || '').trim();
+        let isoDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : '';
+        if (!isoDate) {
+            const dmy = rawDate.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+            if (dmy) isoDate = `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
+        }
+        if (!isoDate) isoDate = new Date().toISOString().slice(0, 10);
+        const [year, month, day] = isoDate.split('-');
+        const dateFormatted = `${day}/${month}/${year}`;
+        const eventText = [event.label, event.date].filter(Boolean).join(' - ');
+        const description = `Iuran Takziah - ${member.name} - ${eventText}`;
+
+        if (existingIndex >= 0) {
+            const item = jurnalKasState[existingIndex];
+            if (item.date !== dateFormatted || item.isoDate !== isoDate || item.desc !== description || item.category !== 'Iuran Takziah' || item.type !== 'in' || Number(item.in) !== value || Number(item.out) !== 0 || Number(item.amount) !== value) {
+                Object.assign(item, { date: dateFormatted, isoDate, desc: description, category: 'Iuran Takziah', type: 'in', in: value, out: 0, amount: value });
+                changed = true;
+            }
+            return;
+        }
+        if (updateOnly) return;
+
+        const nextNo = jurnalKasState.reduce((max, item) => Math.max(max, Number(item.no) || 0), 0) + 1;
+        jurnalKasState.push({
+            id: `jk-takziah-${Date.now()}-${nextNo}`,
+            sourceKey,
+            no: nextNo,
+            date: dateFormatted,
+            isoDate,
+            desc: description,
+            category: 'Iuran Takziah',
+            type: 'in',
+            in: value,
+            out: 0,
+            amount: value
+        });
+        changed = true;
+    });
+
+    if (!changed) return;
+    jurnalKasState.forEach((item, index) => { item.no = index + 1; });
+    saveJurnalKasState();
+    if (typeof renderJurnalView === 'function' && document.getElementById('jurnal-view')) renderJurnalView();
+}
+
 function saveJurnalCategoryState(skipCloud = false) {
     try {
         localStorage.setItem(STORAGE_KEYS.JURNAL_CATEGORIES, JSON.stringify(jurnalKasCategories));
