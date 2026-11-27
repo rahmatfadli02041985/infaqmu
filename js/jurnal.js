@@ -2950,7 +2950,9 @@ function openAddJurnalModal() {
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Kategori</label>
-                        <input type="text" id="new-jurnal-category" required placeholder="Contoh: Infaq Tabung Pengajian / Iuran Takziah" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold outline-none focus:border-emerald-500">
+                        <select id="new-jurnal-category" required class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold outline-none focus:border-emerald-500">
+                            <option value="">Pilih kategori transaksi</option>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Keterangan Lengkap</label>
@@ -2964,6 +2966,15 @@ function openAddJurnalModal() {
             </div>
         `;
         document.body.appendChild(modal);
+    }
+    const categorySelect = modal.querySelector('#new-jurnal-category');
+    if (categorySelect) {
+        const categories = getJurnalUniqueCategories();
+        categorySelect.innerHTML = [
+            '<option value="">Pilih kategori transaksi</option>',
+            ...categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+        ].join('');
+        categorySelect.value = '';
     }
     modal.classList.remove('hidden');
 }
