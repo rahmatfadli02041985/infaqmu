@@ -2498,19 +2498,23 @@ function getJurnalUniqueCategories() {
     return Array.from(cats).sort();
 }
 
-function refreshJurnalCategorySelect(selectId, selectedValue = '') {
+function refreshJurnalCategorySelect(selectId, selectedValue = '', lockTakziah = false) {
     const select = document.getElementById(selectId);
     if (!select) return;
     const categories = getJurnalUniqueCategories();
     select.innerHTML = [
         '<option value="">Pilih kategori transaksi</option>',
-        ...categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+        ...categories.map(category => {
+            const locked = lockTakziah && isTakziahJournalCategory(category);
+            const label = locked ? `${category} (khusus form edit)` : category;
+            return `<option value="${escapeHtml(category)}" ${locked ? 'disabled' : ''}>${escapeHtml(label)}</option>`;
+        })
     ].join('');
-    select.value = categories.includes(selectedValue) ? selectedValue : '';
+    select.value = categories.includes(selectedValue) && !(lockTakziah && isTakziahJournalCategory(selectedValue)) ? selectedValue : '';
 }
 
 function refreshNewJurnalCategorySelect(selectedValue = '') {
-    refreshJurnalCategorySelect('new-jurnal-category', selectedValue);
+    refreshJurnalCategorySelect('new-jurnal-category', selectedValue, true);
 }
 
 function refreshEditJurnalCategorySelect(selectedValue = '') {
@@ -3322,6 +3326,11 @@ function handleSaveNewJurnalTransaction(e) {
     const amountVal = parseIndoNumber(document.getElementById('new-jurnal-amount').value);
     const catVal = document.getElementById('new-jurnal-category').value.trim();
     const descVal = getJurnalDescriptionValue('new');
+
+    if (isTakziahJournalCategory(catVal)) {
+        showToast('Kategori Iuran Takziah hanya dapat digunakan melalui form Edit Transaksi.', 'error');
+        return;
+    }
 
     if (!amountVal || amountVal <= 0) {
         showToast('Nominal harus lebih dari 0.', 'error');
