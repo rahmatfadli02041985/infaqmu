@@ -2314,7 +2314,7 @@ function getJurnalDefaultFilter() {
         month: curMonth,
         type: 'all',
         category: 'all',
-        sort: 'asc' // 'asc' (No 1..N) atau 'desc' (Terbaru ke terlama)
+        sort: 'asc' // 'asc' (tanggal terlama ke terbaru) atau 'desc' (terbaru ke terlama)
     };
 }
 
@@ -2490,10 +2490,25 @@ function resetJurnalKasToDefault() {
     showToast('Data Jurnal Kas berhasil dipulihkan ke 191 data resmi!', 'success');
 }
 
-// Menghitung Saldo Kumulatif (Running Balance) dari nomor 1 sampai N
+function getJurnalTransactionIsoDate(item) {
+    const isoDate = String(item?.isoDate || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return isoDate;
+    const dmy = String(item?.date || '').trim().match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    return dmy ? `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}` : '';
+}
+
+// Saldo kumulatif dihitung sesuai tanggal transaksi; No dipakai sebagai tie-breaker.
 function getJurnalWithCumulativeBalance() {
-    // Pastikan urut kronologis berdasarkan 'no' untuk kalkulasi saldo berjalan akuntansi
-    const sortedChronological = [...jurnalKasState].sort((a, b) => a.no - b.no);
+    const sortedChronological = [...jurnalKasState].sort((a, b) => {
+        const dateA = getJurnalTransactionIsoDate(a);
+        const dateB = getJurnalTransactionIsoDate(b);
+        if (dateA !== dateB) {
+            if (!dateA) return 1;
+            if (!dateB) return -1;
+            return dateA.localeCompare(dateB);
+        }
+        return (Number(a.no) || 0) - (Number(b.no) || 0);
+    });
     let running = 0;
     sortedChronological.forEach(item => {
         const inAmt = Number(item.in) || 0;
@@ -2971,9 +2986,9 @@ function renderJurnalView() {
                     </div>
 
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Urutan No</label>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Urutan Tanggal</label>
                         <select onchange="setJurnalFilter('sort', this.value)" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-800 outline-none">
-                            <option value="asc" ${jurnalFilter.sort === 'asc' ? 'selected' : ''}>No 1 → ${allChronological.length} (Awal)</option>
+                            <option value="asc" ${jurnalFilter.sort === 'asc' ? 'selected' : ''}>Terlama → Terbaru</option>
                             <option value="desc" ${jurnalFilter.sort === 'desc' ? 'selected' : ''}>Terbaru → Terlama</option>
                         </select>
                     </div>
