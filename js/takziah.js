@@ -56,6 +56,8 @@ let takziahState = {
     ]
 };
 
+let takziahPaymentFormState = { memberId: '', date: '' };
+
 function formatTakziahDateText(value) {
     const text = String(value || '').trim();
     const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -277,6 +279,10 @@ function renderTakziahView() {
     if (!container) return;
 
     const isAdmin = currentRole === 'admin';
+    const currentPaymentMember = document.getElementById('takziah-pay-member-id');
+    const currentPaymentDate = document.getElementById('takziah-pay-date');
+    if (currentPaymentMember) takziahPaymentFormState.memberId = currentPaymentMember.value;
+    if (currentPaymentDate?.value) takziahPaymentFormState.date = currentPaymentDate.value;
     const nominal = Number(takziahState.nominalPerMusibah) || 10000;
     const events = takziahState.events || [];
     const members = takziahState.members || [];
@@ -536,6 +542,18 @@ function renderTakziahView() {
             </div>
         </div>
     `;
+
+    const paymentMemberSelect = document.getElementById('takziah-pay-member-id');
+    if (paymentMemberSelect) {
+        const hasRememberedMember = Array.from(paymentMemberSelect.options).some(option => option.value === takziahPaymentFormState.memberId);
+        if (hasRememberedMember) paymentMemberSelect.value = takziahPaymentFormState.memberId;
+        takziahPaymentFormState.memberId = paymentMemberSelect.value;
+    }
+    const paymentDateInput = document.getElementById('takziah-pay-date');
+    if (paymentDateInput) {
+        paymentDateInput.value = takziahPaymentFormState.date || paymentDateInput.value || new Date().toISOString().split('T')[0];
+        takziahPaymentFormState.date = paymentDateInput.value;
+    }
 
     setupTakziahDualHorizontalScroll();
 }
