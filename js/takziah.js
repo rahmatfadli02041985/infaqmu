@@ -413,6 +413,11 @@ function renderTakziahView() {
                     </p>
                 </div>
                 <div class="flex flex-wrap items-center gap-1.5">
+                    ${isAdmin ? `
+                        <button type="button" onclick="resetAllTakziahPayments()" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm">
+                            Reset Pembayaran
+                        </button>
+                    ` : ''}
                     <button type="button" onclick="copyTakziahWaSummary()" class="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm">
                         Salin Rekapan
                     </button>
@@ -533,6 +538,70 @@ function renderTakziahView() {
     `;
 
     setupTakziahDualHorizontalScroll();
+}
+
+async function resetAllTakziahPayments() {
+    if (currentRole !== 'admin') return;
+    const paidCellCount = (takziahState.members || []).reduce((total, member) =>
+        total + Object.values(member.payments || {}).filter(amount => Number(amount) > 0).length, 0);
+    const linkedJournalCount = (Array.isArray(jurnalKasState) ? jurnalKasState : []).filter(item =>
+        String(item.sourceKey || '').startsWith('takziah-payment:') || String(item.sourceKey || '').startsWith('takziah:')
+    ).length;
+    if (paidCellCount === 0 && (takziahState.paymentTransactions || []).length === 0 && linkedJournalCount === 0) {
+        showToast('Semua pembayaran Takziah sudah kosong.', 'info');
+        return;
+    }
+
+    const confirmed = await showInAppDialog({
+        title: 'Reset Semua Pembayaran Takziah?',
+        message: `Reset ${paidCellCount} pembayaran menjadi Rp0, hapus tanggal dan kelompok transaksi pembayaran, serta hapus ${linkedJournalCount} entri Jurnal Kas yang tertaut otomatis? Entri Jurnal Kas yang tidak tertaut akan tetap tersimpan.`,
+        confirmText: 'Reset Semua Pembayaran',
+        cancelText: 'Batal'
+    });
+    if (!confirmed) return;
+
+    // Let any earlier queued saves finish before the reset writes its snapshots.
+    if (typeof sharedStateSaveQueue !== 'undefined') await sharedStateSaveQueue;
+    const previousTakziahState = JSON.parse(JSON.stringify(takziahState));
+    const previousJurnalState = JSON.parse(JSON.stringify(jurnalKasState));
+    takziahState.members.forEach(member => {
+        member.payments = Object.fromEntries((takziahState.events || []).map(event => [event.id, 0]));
+        member.paymentDates = {};
+    });
+    takziahState.paymentTransactions = [];
+    jurnalKasState = jurnalKasState.filter(item =>
+        !String(item.sourceKey || '').startsWith('takziah-payment:') && !String(item.sourceKey || '').startsWith('takziah:')
+    );
+    jurnalKasState.forEach((item, index) => { item.no = index + 1; });
+
+    try {
+        if (typeof saveSharedAppState !== 'function') throw new Error('Fungsi penyimpanan Supabase tidak tersedia.');
+        const takziahSaved = await saveSharedAppState('takziah_data', takziahState);
+        if (!takziahSaved) throw new Error('Data Takziah hanya tersimpan di perangkat; koneksi Supabase belum aktif.');
+        const jurnalSaved = await saveSharedAppState('jurnal_kas_data', jurnalKasState);
+        if (!jurnalSaved) throw new Error('Penyimpanan Jurnal Kas ke Supabase tidak berhasil.');
+
+        saveTakziahState(true);
+        saveJurnalKasState(true);
+        renderTakziahView();
+        if (typeof renderJurnalView === 'function' && document.getElementById('jurnal-view')) renderJurnalView();
+        showToast(`${paidCellCount} pembayaran Takziah dan ${linkedJournalCount} transaksi jurnal tertaut berhasil direset.`, 'success');
+    } catch (error) {
+        takziahState = previousTakziahState;
+        jurnalKasState = previousJurnalState;
+        saveTakziahState(true);
+        saveJurnalKasState(true);
+        try {
+            if (typeof saveSharedAppState === 'function') {
+                await Promise.all([
+                    saveSharedAppState('takziah_data', previousTakziahState),
+                    saveSharedAppState('jurnal_kas_data', previousJurnalState)
+                ]);
+            }
+        } catch (rollbackError) {}
+        renderTakziahView();
+        showToast(`Reset gagal: ${error.message}`, 'error');
+    }
 }
 
 function normalizeTakziahPaymentDate(value) {

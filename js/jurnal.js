@@ -2320,6 +2320,16 @@ function getJurnalDefaultFilter() {
 
 let jurnalFilter = getJurnalDefaultFilter();
 
+function getTakziahJournalDescription(member, eventIds = []) {
+    const eventOrder = new Map(
+        (typeof takziahState !== 'undefined' && Array.isArray(takziahState.events) ? takziahState.events : [])
+            .map((event, index) => [event.id, index + 1])
+    );
+    const paidEventNumbers = eventIds.map(id => eventOrder.get(id)).filter(Number.isInteger);
+    const paymentLabel = paidEventNumbers.length ? ` ${paidEventNumbers.map(number => `#${number}`).join(',')}` : '';
+    return `Iuran Takziah${paymentLabel} - ${member.name}`;
+}
+
 
 function loadJurnalKasState() {
     let loaded = false;
@@ -2353,17 +2363,21 @@ function loadJurnalKasState() {
         jurnalKasState.forEach(item => {
             if (!String(item.sourceKey || '').startsWith('takziah')) return;
             let memberId = '';
+            let eventIds = [];
             if (item.sourceKey.startsWith('takziah-payment:')) {
                 const transactionId = item.sourceKey.slice('takziah-payment:'.length);
                 const payment = (takziahState.paymentTransactions || []).find(tx => tx.id === transactionId);
                 memberId = payment?.memberId || '';
+                eventIds = payment?.eventIds || [];
             } else if (item.sourceKey.startsWith('takziah:')) {
-                memberId = item.sourceKey.split(':')[1] || '';
+                const [, linkedMemberId, eventId] = item.sourceKey.split(':');
+                memberId = linkedMemberId || '';
+                eventIds = eventId ? [eventId] : [];
             }
             const member = takziahState.members.find(entry => entry.id === memberId)
                 || takziahState.members.find(entry => entry.name && String(item.desc || '').toLowerCase().includes(String(entry.name).toLowerCase()));
             if (!member) return;
-            const description = `Iuran Takziah - ${member.name}`;
+            const description = getTakziahJournalDescription(member, eventIds);
             if (item.desc !== description) {
                 item.desc = description;
                 descriptionsChanged = true;
@@ -2423,7 +2437,7 @@ function syncTakziahPaymentsToJournal(changes) {
         if (!isoDate) isoDate = new Date().toISOString().slice(0, 10);
         const [year, month, day] = isoDate.split('-');
         const dateFormatted = `${day}/${month}/${year}`;
-        const description = `Iuran Takziah - ${member.name}`;
+        const description = getTakziahJournalDescription(member, transaction.eventIds || []);
         const value = Number(transaction.amount) || 0;
 
         if (existingIndex >= 0) {
