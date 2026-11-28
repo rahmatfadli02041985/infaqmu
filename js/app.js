@@ -1592,16 +1592,20 @@ function backupDatabaseToLocalDrive(format = 'json') {
     // Default: Backup JSON Lengkap (Settings, Transaksi, Laporan WA, Iuran Takziah, Jurnal Kas)
     let takziahData = null;
     try {
-        const rawT = localStorage.getItem((typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.TAKZIAH) ? STORAGE_KEYS.TAKZIAH : 'infaqmu_takziah_data_v1');
-        if (rawT) takziahData = JSON.parse(rawT);
-        else if (typeof takziahState !== 'undefined') takziahData = takziahState;
+        if (typeof takziahState !== 'undefined') takziahData = JSON.parse(JSON.stringify(takziahState));
+        else {
+            const rawT = localStorage.getItem((typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.TAKZIAH) ? STORAGE_KEYS.TAKZIAH : 'infaqmu_takziah_data_v1');
+            if (rawT) takziahData = JSON.parse(rawT);
+        }
     } catch (e) {}
 
     let jurnalKasData = null;
     try {
-        const rawJ = localStorage.getItem((typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.JURNAL_KAS) ? STORAGE_KEYS.JURNAL_KAS : 'infaqmu_jurnal_kas_v1');
-        if (rawJ) jurnalKasData = JSON.parse(rawJ);
-        else if (typeof jurnalKasState !== 'undefined') jurnalKasData = jurnalKasState;
+        if (typeof jurnalKasState !== 'undefined') jurnalKasData = JSON.parse(JSON.stringify(jurnalKasState));
+        else {
+            const rawJ = localStorage.getItem((typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.JURNAL_KAS) ? STORAGE_KEYS.JURNAL_KAS : 'infaqmu_jurnal_kas_v1');
+            if (rawJ) jurnalKasData = JSON.parse(rawJ);
+        }
     } catch (e) {}
 
     const fullBackup = {
@@ -1629,6 +1633,7 @@ function backupDatabaseToLocalDrive(format = 'json') {
     const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
     triggerDownload(blob, `Backup_Database_InfaqMU_${dateFormatted}_${timestamp}.json`);
     showToast('File backup JSON berhasil disimpan ke drive lokal!', 'success');
+    return true;
 }
 
 function openRestoreBackupPicker() {

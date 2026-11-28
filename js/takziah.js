@@ -542,6 +542,15 @@ function renderTakziahView() {
 
 async function resetAllTakziahPayments() {
     if (currentRole !== 'admin') return;
+    try {
+        if (typeof backupDatabaseToLocalDrive !== 'function' || backupDatabaseToLocalDrive('json') !== true) {
+            throw new Error('Fungsi backup database tidak tersedia.');
+        }
+    } catch (error) {
+        showToast(`Backup gagal; reset dibatalkan: ${error.message}`, 'error');
+        return;
+    }
+
     const paidCellCount = (takziahState.members || []).reduce((total, member) =>
         total + Object.values(member.payments || {}).filter(amount => Number(amount) > 0).length, 0);
     const linkedJournalCount = (Array.isArray(jurnalKasState) ? jurnalKasState : []).filter(item =>
