@@ -2400,7 +2400,7 @@ function saveJurnalKasState(skipCloud = false) {
 }
 
 // Keep every Takziah payment submission mirrored to exactly one Journal row.
-function syncTakziahPaymentsToJournal(changes) {
+function syncTakziahPaymentsToJournal(changes, skipCloudSave = false) {
     if (!Array.isArray(changes) || !changes.length || !Array.isArray(jurnalKasState)) return;
     let changed = false;
 
@@ -2469,7 +2469,7 @@ function syncTakziahPaymentsToJournal(changes) {
 
     if (!changed) return;
     jurnalKasState.forEach((item, index) => { item.no = index + 1; });
-    saveJurnalKasState();
+    saveJurnalKasState(skipCloudSave);
     if (typeof renderJurnalView === 'function' && document.getElementById('jurnal-view')) renderJurnalView();
 }
 

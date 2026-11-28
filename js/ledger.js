@@ -124,6 +124,10 @@ let realtimeFallbackTimer = null;
 let sharedStateSaveQueue = Promise.resolve();
 
 async function saveSharedAppState(column, value) {
+    return saveSharedAppStatePatch({ [column]: value });
+}
+
+async function saveSharedAppStatePatch(values) {
     if (!sbCredentials.url || !sbCredentials.key) {
         updateDiagnosticBox('Belum ada koneksi Cloud; perubahan hanya tersimpan di perangkat ini.');
         return false;
@@ -132,7 +136,7 @@ async function saveSharedAppState(column, value) {
     const updated = await supabaseRestFetch('infaq_settings?id=eq.1', {
         method: 'PATCH',
         headers: { Prefer: 'return=representation' },
-        body: { [column]: value }
+        body: values
     });
     if (!Array.isArray(updated) || updated.length === 0) {
         throw new Error('Pengaturan Cloud tidak ditemukan atau akses tulis ditolak.');

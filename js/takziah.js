@@ -57,6 +57,7 @@ let takziahState = {
 };
 
 let takziahPaymentFormState = { memberId: '', date: '' };
+let takziahPaymentSaveInProgress = false;
 
 function formatTakziahDateText(value) {
     const text = String(value || '').trim();
@@ -196,81 +197,122 @@ function scrollTakziahHorizontalBy(deltaX) {
     }
 }
 
-function handleTakziahBatchPayment(e) {
+async function handleTakziahBatchPayment(e) {
     e.preventDefault();
     if (currentRole !== 'admin') return;
-
-    const memberSelect = document.getElementById('takziah-pay-member-id');
-    const amountInput = document.getElementById('takziah-pay-amount');
-    const dateInput = document.getElementById('takziah-pay-date');
-    if (!memberSelect || !amountInput) return;
-
-    const memberId = memberSelect.value;
-    const rawAmount = parseIndoNumber(amountInput.value);
-    const payDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
-    const nominal = Number(takziahState.nominalPerMusibah) || 10000;
-
-    if (!memberId) {
-        showToast('Silakan pilih nama anggota terlebih dahulu.', 'error');
-        return;
-    }
-    if (rawAmount <= 0 || rawAmount % nominal !== 0) {
-        showToast(`Nominal pembayaran harus kelipatan ${formatRupiahCompactNoSpace(nominal)}!`, 'error');
+    if (takziahPaymentSaveInProgress) return;
+    if (!sbCredentials?.url || !sbCredentials?.key) {
+        showToast('Koneksi Supabase belum siap. Pembayaran tidak disimpan; periksa Pengaturan Admin & Cloud.', 'error');
         return;
     }
 
-    const member = takziahState.members.find(m => m.id === memberId);
-    if (!member) return;
-    if (!member.payments) member.payments = {};
-    if (!member.paymentDates) member.paymentDates = {};
+    takziahPaymentSaveInProgress = true;
+    let previousTakziahState = null;
+    let previousJurnalState = null;
+    try {
+        // Finish older queued writes first so they cannot overwrite this payment afterward.
+        if (typeof sharedStateSaveQueue !== 'undefined') await sharedStateSaveQueue;
 
-    const slotsNeeded = Math.floor(rawAmount / nominal);
-    const unpaidEvents = (takziahState.events || []).filter(ev => Number(member.payments[ev.id] || 0) < nominal);
+        const memberSelect = document.getElementById('takziah-pay-member-id');
+        const amountInput = document.getElementById('takziah-pay-amount');
+        const dateInput = document.getElementById('takziah-pay-date');
+        if (!memberSelect || !amountInput) return;
 
-    if (unpaidEvents.length === 0) {
-        showToast(`${member.name} sudah melunasi seluruh ${takziahState.events.length} iuran musibah!`, 'info');
-        return;
+        const memberId = memberSelect.value;
+        const rawAmount = parseIndoNumber(amountInput.value);
+        const payDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
+        const nominal = Number(takziahState.nominalPerMusibah) || 10000;
+
+        if (!memberId) {
+            showToast('Silakan pilih nama anggota terlebih dahulu.', 'error');
+            return;
+        }
+        if (rawAmount <= 0 || rawAmount % nominal !== 0) {
+            showToast(`Nominal pembayaran harus kelipatan ${formatRupiahCompactNoSpace(nominal)}!`, 'error');
+            return;
+        }
+
+        const member = takziahState.members.find(m => m.id === memberId);
+        if (!member) return;
+        if (!Array.isArray(jurnalKasState)) throw new Error('Data Jurnal Kas belum siap dimuat.');
+        if (!member.payments) member.payments = {};
+        if (!member.paymentDates) member.paymentDates = {};
+
+        const slotsNeeded = Math.floor(rawAmount / nominal);
+        const unpaidEvents = (takziahState.events || []).filter(ev => Number(member.payments[ev.id] || 0) < nominal);
+
+        if (unpaidEvents.length === 0) {
+            showToast(`${member.name} sudah melunasi seluruh ${takziahState.events.length} iuran musibah!`, 'info');
+            return;
+        }
+        if (slotsNeeded > unpaidEvents.length) {
+            const maxAllowed = unpaidEvents.length * nominal;
+            showToast(`Sisa tunggakan ${member.name} hanya ${unpaidEvents.length}x (${formatRupiahCompactNoSpace(maxAllowed)}). Masukkan maksimal ${formatRupiahCompactNoSpace(maxAllowed)}.`, 'error');
+            return;
+        }
+
+        previousTakziahState = JSON.parse(JSON.stringify(takziahState));
+        previousJurnalState = JSON.parse(JSON.stringify(jurnalKasState));
+        takziahPaymentFormState = { memberId, date: payDate };
+
+        const paidEvents = unpaidEvents.slice(0, slotsNeeded);
+        paidEvents.forEach(event => {
+            member.payments[event.id] = nominal;
+            member.paymentDates[event.id] = payDate;
+        });
+        const paymentTransaction = {
+            id: `tp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            memberId: member.id,
+            eventIds: paidEvents.map(event => event.id),
+            amount: rawAmount,
+            date: payDate
+        };
+        if (!Array.isArray(takziahState.paymentTransactions)) takziahState.paymentTransactions = [];
+        takziahState.paymentTransactions.push(paymentTransaction);
+
+        const prevScrollLeft = document.getElementById('takziah-bottom-table-scroll')?.scrollLeft || 0;
+        if (typeof syncTakziahPaymentsToJournal !== 'function') throw new Error('Fungsi sinkronisasi Jurnal Kas tidak tersedia.');
+        syncTakziahPaymentsToJournal([{ transaction: paymentTransaction, member, events: paidEvents, createIfMissing: true }], true);
+        if (!jurnalKasState.some(item => item.sourceKey === `takziah-payment:${paymentTransaction.id}`)) {
+            throw new Error('Transaksi Jurnal Kas tidak berhasil dibuat.');
+        }
+        saveTakziahState(true);
+
+        const cloudSaved = await saveSharedAppStatePatch({
+            takziah_data: takziahState,
+            jurnal_kas_data: jurnalKasState
+        });
+        if (!cloudSaved) throw new Error('Supabase tidak mengonfirmasi penyimpanan pembayaran dan Jurnal Kas.');
+
+        renderTakziahView();
+        const newBottomWrap = document.getElementById('takziah-bottom-table-scroll');
+        const newTopBar = document.getElementById('takziah-top-scroll-bar');
+        if (newBottomWrap) newBottomWrap.scrollLeft = prevScrollLeft;
+        if (newTopBar) newTopBar.scrollLeft = prevScrollLeft;
+        showToast(`Pembayaran ${formatRupiahCompactNoSpace(rawAmount)} (${slotsNeeded}x musibah) untuk ${member.name} berhasil disimpan ke Supabase.`, 'success');
+    } catch (error) {
+        if (previousTakziahState && previousJurnalState) {
+            takziahState = previousTakziahState;
+            jurnalKasState = previousJurnalState;
+            saveTakziahState(true);
+            saveJurnalKasState(true);
+            try {
+                const rollback = await saveSharedAppStatePatch({
+                    takziah_data: previousTakziahState,
+                    jurnal_kas_data: previousJurnalState
+                });
+                if (!rollback) {
+                    updateDiagnosticBox('Pembayaran Takziah gagal tersimpan dan pemulihan Cloud tidak lengkap. Segera periksa sinkronisasi Supabase.');
+                }
+            } catch (rollbackError) {
+                updateDiagnosticBox(`Pembayaran gagal dan pemulihan Cloud gagal: ${rollbackError.message}`);
+            }
+            renderTakziahView();
+        }
+        showToast(`Pembayaran tidak tersimpan ke Supabase: ${error.message}`, 'error');
+    } finally {
+        takziahPaymentSaveInProgress = false;
     }
-
-    if (slotsNeeded > unpaidEvents.length) {
-        const maxAllowed = unpaidEvents.length * nominal;
-        showToast(`Sisa tunggakan ${member.name} hanya ${unpaidEvents.length}x (${formatRupiahCompactNoSpace(maxAllowed)}). Masukkan maksimal ${formatRupiahCompactNoSpace(maxAllowed)}.`, 'error');
-        return;
-    }
-
-    const paidEvents = [];
-    for (let i = 0; i < slotsNeeded; i++) {
-        const targetEv = unpaidEvents[i];
-        member.payments[targetEv.id] = nominal;
-        member.paymentDates[targetEv.id] = payDate;
-        paidEvents.push(targetEv);
-    }
-
-    const paymentTransaction = {
-        id: `tp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        memberId: member.id,
-        eventIds: paidEvents.map(ev => ev.id),
-        amount: rawAmount,
-        date: payDate
-    };
-    if (!Array.isArray(takziahState.paymentTransactions)) takziahState.paymentTransactions = [];
-    takziahState.paymentTransactions.push(paymentTransaction);
-
-    const prevScrollLeft = document.getElementById('takziah-bottom-table-scroll')?.scrollLeft || 0;
-    if (typeof syncTakziahPaymentsToJournal === 'function') syncTakziahPaymentsToJournal([{ transaction: paymentTransaction, member, events: paidEvents, createIfMissing: true }]);
-    saveTakziahState();
-    renderTakziahView();
-
-    const newBottomWrap = document.getElementById('takziah-bottom-table-scroll');
-    const newTopBar = document.getElementById('takziah-top-scroll-bar');
-    if (newBottomWrap) newBottomWrap.scrollLeft = prevScrollLeft;
-    if (newTopBar) newTopBar.scrollLeft = prevScrollLeft;
-    const newSelect = document.getElementById('takziah-pay-member-id');
-    if (newSelect) newSelect.value = memberId;
-    const newDateInput = document.getElementById('takziah-pay-date');
-    if (newDateInput && payDate) newDateInput.value = payDate;
-
-    showToast(`Berhasil mencatat pembayaran ${formatRupiahCompactNoSpace(rawAmount)} (${slotsNeeded}x musibah) untuk ${member.name}!`, 'success');
 }
 
 function renderTakziahView() {
@@ -288,21 +330,34 @@ function renderTakziahView() {
     const members = takziahState.members || [];
     const totalWajibPerAnggota = events.length * nominal;
 
-    const eventTotals = {};
-    events.forEach(ev => { eventTotals[ev.id] = 0; });
-
     let grandTotalBayar = 0;
     let grandTotalTunggakan = 0;
+    const originalEventOrder = new Map(events.map((event, eventIndex) => [event.id, eventIndex]));
 
     const computedRows = members.map((m, idx) => {
         let rowBayar = 0;
         events.forEach(ev => {
             const paid = Number((m.payments && m.payments[ev.id]) || 0);
             rowBayar += paid;
-            eventTotals[ev.id] = (eventTotals[ev.id] || 0) + paid;
         });
         const rowTunggakan = Math.max(0, totalWajibPerAnggota - rowBayar);
         const ket = getTakziahKeteranganAndCount(rowTunggakan, nominal);
+        const displayEvents = [...events].sort((eventA, eventB) => {
+            const amountA = Number(m.payments?.[eventA.id]) || 0;
+            const amountB = Number(m.payments?.[eventB.id]) || 0;
+            const paidA = amountA > 0;
+            const paidB = amountB > 0;
+            if (paidA !== paidB) return paidA ? -1 : 1;
+
+            if (paidA && paidB) {
+                const dateA = normalizeTakziahPaymentDate(m.paymentDates?.[eventA.id]);
+                const dateB = normalizeTakziahPaymentDate(m.paymentDates?.[eventB.id]);
+                if (dateA && dateB && dateA !== dateB) return dateA.localeCompare(dateB);
+                if (dateA && !dateB) return -1;
+                if (!dateA && dateB) return 1;
+            }
+            return originalEventOrder.get(eventA.id) - originalEventOrder.get(eventB.id);
+        });
 
         grandTotalBayar += rowBayar;
         grandTotalTunggakan += rowTunggakan;
@@ -312,9 +367,16 @@ function renderTakziahView() {
             member: m,
             rowBayar,
             rowTunggakan,
-            ket
+            ket,
+            displayEvents
         };
     });
+
+    const displayedColumnTotals = events.map((_, columnIndex) => computedRows.reduce((sum, row) => {
+        const event = row.displayEvents[columnIndex];
+        const amount = event ? (Number(row.member.payments?.[event.id]) || 0) : 0;
+        return sum + amount;
+    }, 0));
 
     const memberSelectOptions = computedRows.map(r => {
         const sisaInfo = r.rowTunggakan > 0 ? `Sisa ${r.ket.text} (${formatRupiahCompactNoSpace(r.rowTunggakan)})` : 'LUNAS';
@@ -335,7 +397,7 @@ function renderTakziahView() {
 
     const bodyRowsHtml = computedRows.map(row => {
         const m = row.member;
-        const paymentCells = events.map(ev => {
+        const paymentCells = row.displayEvents.map(ev => {
             const val = Number((m.payments && m.payments[ev.id]) || 0);
             const isPaid = val >= nominal;
             if (isAdmin) {
@@ -348,7 +410,7 @@ function renderTakziahView() {
                             <div class="flex items-center justify-end gap-1.5">
                                 <button type="button" onclick="toggleTakziahPayment('${m.id}', '${ev.id}')"
                                     class="px-2 py-1 rounded text-[11px] font-bold transition-colors bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100"
-                                    title="Lunas ${formatRupiahCompactNoSpace(val)}${payDateInfo} - Klik untuk membatalkan ke Rp0">
+                                    title="${escapeHtml(ev.label)} — Lunas ${formatRupiahCompactNoSpace(val)}${payDateInfo} - Klik untuk membatalkan ke Rp0">
                                     ${formatRupiahCompactNoSpace(val)}
                                 </button>
                             </div>
@@ -378,7 +440,7 @@ function renderTakziahView() {
         return `
             <tr class="hover:bg-slate-50/80 transition-colors">
                 <td class="border border-slate-800 px-2 py-2 text-right font-medium text-slate-900 bg-white">${row.index}</td>
-                <td class="border border-slate-800 px-2.5 py-2 text-left font-medium text-slate-900 bg-white">
+                <td class="border border-slate-800 border-x-2 border-slate-900 min-w-[170px] px-2.5 py-2 text-left font-medium text-slate-900 bg-white">
                     <div class="flex items-center justify-between gap-2">
                         <span>${escapeHtml(m.name)}</span>
                         ${isAdmin ? `
@@ -403,9 +465,9 @@ function renderTakziahView() {
         `;
     }).join('');
 
-    const footerEventTotalsHtml = events.map(ev => `
+    const footerEventTotalsHtml = events.map((_, columnIndex) => `
         <td class="border border-slate-800 px-2.5 py-2 text-right font-extrabold text-slate-950 bg-white">
-            ${formatRupiahCompactNoSpace(eventTotals[ev.id] || 0)}
+            ${formatRupiahCompactNoSpace(displayedColumnTotals[columnIndex] || 0)}
         </td>
     `).join('');
 
@@ -507,7 +569,7 @@ function renderTakziahView() {
                         <thead class="sticky top-0 z-20 bg-[#FDE9C9]">
                             <tr>
                                 <th class="sticky top-0 z-20 border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 w-10">No</th>
-                                <th class="sticky top-0 left-0 z-30 border border-slate-800 bg-[#f5dec2] px-3 py-2 text-center font-bold text-slate-900 min-w-[145px]">Nama Anggota</th>
+                                <th class="sticky top-0 left-0 z-30 border border-slate-800 border-x-2 border-slate-900 bg-[#f5dec2] px-3 py-2 text-center font-bold text-slate-900 min-w-[170px]">Nama Anggota</th>
                                 ${headerEventCols}
                                 <th class="sticky top-0 z-20 border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 min-w-[95px]">Total Bayar</th>
                                 <th class="sticky top-0 z-20 border border-slate-800 bg-[#FDE9C9] px-2.5 py-2 text-center font-bold text-slate-900 min-w-[95px]">Tunggakan</th>
